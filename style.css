@@ -38,17 +38,22 @@ nav a:hover, .btn-destaque { color: #fff; }
 .btn-login { border: 1px solid #fff; padding: 6px 15px; border-radius: 20px; }
 .btn-login:hover { background: #fff; color: #000; }
 
-/* --- WIDGET RELÓGIO --- */
+/* --- WIDGET RELÓGIO (AGORA BRANCO) --- */
 #relogio-widget {
     position: fixed; top: 90px; right: 30px;
     width: 160px; height: auto; z-index: 900; pointer-events: none;
     animation: floatClock 4s ease-in-out infinite; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));
 }
 #relogio-widget img { width: 100%; display: block; }
+
 #hora-atual {
     position: absolute; top: 52%; right: 20px; transform: translateY(-50%);
-    font-family: 'Inter', sans-serif; font-weight: 900; font-size: 26px; color: #000; letter-spacing: 1px;
+    font-family: 'Inter', sans-serif; font-weight: 900; font-size: 26px;
+    color: #fff; /* MUDANÇA: BRANCO */
+    letter-spacing: 1px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8); /* Sombra para ler melhor */
 }
+
 @keyframes floatClock { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 
 /* --- HERO SLIDER --- */
@@ -72,7 +77,7 @@ nav a:hover, .btn-destaque { color: #fff; }
     padding: 0 20px; margin-top: -5px; z-index: 1;
 }
 .rockstar-bg {
-    position: absolute; top: -10%; left: 0; width: 100%; height: 110%; 
+    position: absolute; top: -10%; left: 0; width: 100%; height: 120%; 
     background-size: cover; background-position: center; z-index: 0;
     will-change: transform, filter; transform: scale(1.1); 
 }
@@ -161,14 +166,13 @@ footer { padding: 50px; text-align: center; font-size: 14px; color: #666; backgr
     .full-width { grid-column: span 1; }
     header { padding: 15px 20px; }
     
-    /* --- RELÓGIO NO MOBILE (AJUSTADO) --- */
+    /* Relógio no Mobile: Pequeno no canto */
     #relogio-widget {
-        display: block; /* Mantém visível */
-        width: 120px;   /* Reduz o tamanho */
-        top: 80px;      /* Sobe um pouco */
-        right: 20px;    /* Ajusta a margem */
+        display: block; 
+        width: 120px; 
+        top: 80px; 
+        right: 20px; 
     }
-    /* Ajusta o tamanho da fonte da hora para caber na imagem menor */
     #hora-atual {
         font-size: 19px;
     }
