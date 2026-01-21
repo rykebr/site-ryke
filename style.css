@@ -12,7 +12,7 @@ header {
 }
 .logo { font-size: 20px; font-weight: 900; letter-spacing: 1px; color: #fff; }
 
-/* --- BOTÃO MOBILE (ESTILO FORÇADO) --- */
+/* --- BOTÃO MOBILE --- */
 .mobile-btn {
     display: none; /* Escondido no PC */
     cursor: pointer;
@@ -20,22 +20,16 @@ header {
     gap: 6px;
     padding: 10px;
     z-index: 1100;
-    /* Garante que o botão tenha tamanho */
     width: 45px; 
     height: 45px;
     justify-content: center;
     align-items: center;
-    /* Borda transparente para depuração, se precisar */
     border: 1px solid transparent; 
 }
 
 .bar {
-    width: 30px;
-    height: 3px;
-    background-color: #fff; /* Cor branca para contrastar com o fundo preto */
-    border-radius: 3px;
-    transition: 0.3s;
-    display: block; /* Garante que a barra apareça */
+    width: 30px; height: 3px; background-color: #fff; 
+    border-radius: 3px; transition: 0.3s; display: block; 
 }
 
 /* Navegação PC */
@@ -167,6 +161,15 @@ footer { padding: 50px; text-align: center; font-size: 14px; color: #666; backgr
     .full-width { grid-column: span 1; }
     header { padding: 15px 20px; }
     
-    /* Esconde o relógio no celular para não tapar o menu */
-    #relogio-widget { display: none; }
+    /* --- RELÓGIO NO MOBILE (AJUSTADO) --- */
+    #relogio-widget {
+        display: block; /* Mantém visível */
+        width: 120px;   /* Reduz o tamanho */
+        top: 80px;      /* Sobe um pouco */
+        right: 20px;    /* Ajusta a margem */
+    }
+    /* Ajusta o tamanho da fonte da hora para caber na imagem menor */
+    #hora-atual {
+        font-size: 19px;
+    }
 }
