@@ -13,9 +13,8 @@
         <div class="logo">RYKE SISTEMAS</div>
         <nav>
             <a href="#home">Início</a>
-            <a href="#funcionalidades">Funcionalidades</a>
-            <a href="#manuais">Manuais & Ajuda</a>
-            <a href="#orcamento" class="btn-destaque">Solicitar Orçamento</a>
+            <a href="#guia">Como Funciona</a>
+            <a href="#orcamento" class="btn-destaque">Orçamento</a>
             <a href="demo/index.html" class="btn-login">Acessar Demonstração</a>
         </nav>
     </header>
@@ -23,165 +22,167 @@
     <section id="home" class="hero">
         <div class="slide active" style="background-image: url('img/banner-encomendas.png');">
             <div class="content">
-                <h2>Sistema de Encomendas</h2>
-                <p>Gestão completa de recebimento e entrega com notificações automáticas via E-mail.</p>
-                <a href="#funcionalidades" class="btn-hero">Como Funciona?</a>
+                <h2>Controle Total do seu Condomínio</h2>
+                <p>Gestão de encomendas, manutenção e portaria em um único sistema.</p>
+                <a href="#guia" class="btn-hero">Ver Recursos</a>
             </div>
         </div>
-
         <div class="slide" style="background-image: url('img/banner-manutencao.png');">
             <div class="content">
                 <h2>Gestão de Manutenção</h2>
-                <p>Controle de chamados, agenda de prestadores e histórico detalhado.</p>
-                <a href="#funcionalidades" class="btn-hero">Ver Recursos</a>
+                <p>Organize chamados, preventivas e histórico com fotos.</p>
+                <a href="#guia" class="btn-hero">Saiba Mais</a>
             </div>
         </div>
-
         <div class="slider-nav">
             <div class="nav-btn active" onclick="manualSlide(0)"></div>
             <div class="nav-btn" onclick="manualSlide(1)"></div>
         </div>
     </section>
 
-    <section id="funcionalidades" class="info-section">
+    <section class="interactive-banner banner-top">
+        <div class="banner-content">
+            <h2>Potencialize seu Condomínio</h2>
+            <p>Controle de Encomendas, Manutenção Predial e Notificações Inteligentes.</p>
+        </div>
+    </section>
+
+    <section id="guia" class="apple-section">
         <div class="container">
-            <h3 class="section-title">🚀 Potencialize seu Condomínio</h3>
-            <div class="grid-cards">
-                <div class="card">
-                    <div class="icon">📦</div>
-                    <h4>Controle de Encomendas</h4>
-                    <p>Registre entradas com foto, notifique o morador automaticamente e colha assinatura digital na retirada.</p>
+            <h3 class="section-title">Como configurar e usar</h3>
+            <p class="subtitle">Simples, intuitivo e poderoso. Veja como é fácil começar.</p>
+
+            <div class="feature-row">
+                <div class="feature-img">
+                    <img src="img/Navegador.png" alt="Tela de Configuração">
                 </div>
-                <div class="card">
-                    <div class="icon">🛠️</div>
-                    <h4>Manutenção Predial</h4>
-                    <p>Gerencie preventivas e corretivas. Elétrica, Hidráulica, Jardinagem e muito mais em um só lugar.</p>
+                <div class="feature-text">
+                    <h4>Personalize para seu Condomínio</h4>
+                    <p>O sistema se adapta à sua estrutura física, não o contrário.</p>
+                    <div class="step-list">
+                        <div class="step">
+                            <span class="step-num">1</span>
+                            <p>No menu <b>Configurações</b>, defina se você usa Blocos, Torres, Ruas ou Quadras.</p>
+                        </div>
+                        <div class="step">
+                            <span class="step-num">2</span>
+                            <p>Insira a quantidade de andares e apartamentos. O sistema gera a lista automaticamente.</p>
+                        </div>
+                        <div class="step">
+                            <span class="step-num">3</span>
+                            <p>Configure seu <b>E-mail Gmail</b> para enviar as notificações automáticas aos moradores.</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="card">
-                    <div class="icon">📱</div>
-                    <h4>Acesso Mobile</h4>
-                    <p>Porteiros e zeladores podem usar o celular para registrar dados e tirar fotos andando pelo condomínio.</p>
+            </div>
+
+            <div class="feature-row reverse">
+                <div class="feature-text">
+                    <h4>Gestão de Encomendas</h4>
+                    <p>Agilidade na portaria e segurança para o morador.</p>
+                    <div class="step-list">
+                        <div class="step">
+                            <span class="step-num">1</span>
+                            <p><b>Recebimento:</b> Digite a unidade. O sistema busca o morador e você tira uma foto da encomenda.</p>
+                        </div>
+                        <div class="step">
+                            <span class="step-num">2</span>
+                            <p><b>Notificação:</b> O morador recebe um e-mail na hora com a foto do pacote.</p>
+                        </div>
+                        <div class="step">
+                            <span class="step-num">3</span>
+                            <p><b>Retirada:</b> Colete a assinatura digital direto na tela ou tablet para dar baixa.</p>
+                        </div>
+                    </div>
                 </div>
-                <div class="card">
-                    <div class="icon">📧</div>
-                    <h4>Notificações Smart</h4>
-                    <p>Sistema de rodízio de e-mails para garantir que o aviso chegue ao morador sem cair no spam.</p>
+                <div class="feature-img">
+                    <img src="img/Mobile.png" alt="Sistema de Encomendas">
+                </div>
+            </div>
+
+            <div class="feature-row">
+                <div class="feature-img">
+                    <img src="img/Manutenção.png" alt="Sistema de Manutenção">
+                </div>
+                <div class="feature-text">
+                    <h4>Controle de Manutenção</h4>
+                    <p>Nunca mais esqueça uma lâmpada queimada ou uma revisão preventiva.</p>
+                    <div class="step-list">
+                        <div class="step">
+                            <span class="step-num">1</span>
+                            <p>Crie categorias personalizadas (Jardinagem, Elétrica, Piscina).</p>
+                        </div>
+                        <div class="step">
+                            <span class="step-num">2</span>
+                            <p>Abra um chamado indicando o local e a urgência. Ele fica visível no calendário.</p>
+                        </div>
+                        <div class="step">
+                            <span class="step-num">3</span>
+                            <p>Ao finalizar, anexe a foto do serviço pronto e registre quem realizou o reparo.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="feature-row reverse">
+                <div class="feature-text">
+                    <h4>Acesso em Rede e Wi-Fi</h4>
+                    <p>Use em vários computadores ou celulares simultaneamente.</p>
+                    <div class="step-list">
+                        <div class="step">
+                            <span class="step-num">1</span>
+                            <p>Mantenha o sistema aberto no <b>Computador Principal (Servidor)</b>.</p>
+                        </div>
+                        <div class="step">
+                            <span class="step-num">2</span>
+                            <p>Nos outros dispositivos (Portaria 2, Celular do Zelador), conecte no mesmo Wi-Fi.</p>
+                        </div>
+                        <div class="step">
+                            <span class="step-num">3</span>
+                            <p>Leia o <b>QR Code</b> na tela inicial ou digite o IP para acessar o sistema completo sem instalar nada.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="feature-img">
+                    <img src="img/paineldoservidor.png" alt="Acesso via Rede">
                 </div>
             </div>
         </div>
     </section>
 
-    <section id="manuais" class="docs-section">
-        <div class="container">
-            <h3 class="section-title">📚 Central de Ajuda e Manuais</h3>
-            <p class="subtitle">Entenda como configurar e personalizar o sistema para o seu condomínio.</p>
-
-            <div class="doc-block">
-                <div class="doc-header">
-                    <span class="emoji">📦</span>
-                    <div class="text">
-                        <h4>Módulo de Encomendas</h4>
-                        <span>Como cadastrar, notificar e dar baixa.</span>
-                    </div>
-                </div>
-                <div class="doc-body">
-                    <ul>
-                        <li><b>Cadastro Rápido:</b> Digite a unidade e o sistema busca o morador. Se for novo, digite o nome e e-mail.</li>
-                        <li><b>Fotos e Rastreio:</b> Use a webcam ou a câmera do celular para fotografar o pacote e escaneie o código de barras.</li>
-                        <li><b>Notificação:</b> Ao clicar em "Salvar", o morador recebe um e-mail com a foto da encomenda instantaneamente.</li>
-                        <li><b>Retirada (Baixa):</b> Busque pela unidade, selecione as encomendas e peça para o morador assinar digitalmente na tela.</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="doc-block">
-                <div class="doc-header">
-                    <span class="emoji">⚙️</span>
-                    <div class="text">
-                        <h4>Personalização do Condomínio</h4>
-                        <span>Adapte o sistema à sua estrutura física.</span>
-                    </div>
-                </div>
-                <div class="doc-body">
-                    <p>No menu <b>Configurações</b>, você define exatamente como seu condomínio é:</p>
-                    <div class="tags-container">
-                        <span class="tag">🏢 Blocos e Aptos</span>
-                        <span class="tag">🛣️ Ruas e Casas</span>
-                        <span class="tag">⬜ Quadras e Lotes</span>
-                    </div>
-                    <p style="margin-top:10px;">Você também personaliza o <b>Modelo de E-mail</b> que o morador recebe, alterando cores, tamanho da fonte e texto padrão.</p>
-                </div>
-            </div>
-
-            <div class="doc-block">
-                <div class="doc-header">
-                    <span class="emoji">🛠️</span>
-                    <div class="text">
-                        <h4>Gestão de Manutenção</h4>
-                        <span>Preventivas, Corretivas e Histórico.</span>
-                    </div>
-                </div>
-                <div class="doc-body">
-                    <ul>
-                        <li><b>Categorias Dinâmicas:</b> Crie seus próprios tipos de serviço (Ex: Piscina, Portão, Gás).</li>
-                        <li><b>Agenda Visual:</b> Veja no calendário o que está pendente e o que foi concluído.</li>
-                        <li><b>Alertas:</b> Defina se é "Urgente" para destacar na lista.</li>
-                        <li><b>Conclusão:</b> Ao finalizar, registre quem fez o serviço, como resolveu e anexe uma foto do "Depois".</li>
-                    </ul>
-                </div>
-            </div>
-
-            <div class="doc-block">
-                <div class="doc-header">
-                    <span class="emoji">🖥️</span>
-                    <div class="text">
-                        <h4>Uso em Rede e Celular</h4>
-                        <span>Como conectar outros dispositivos.</span>
-                    </div>
-                </div>
-                <div class="doc-body">
-                    <div class="alert-box">
-                        <b>⚠️ REGRA DE OURO:</b> O sistema deve ser instalado apenas no <b>Computador Principal (Servidor)</b>.
-                    </div>
-                    <ol>
-                        <li>Mantenha o PC Principal ligado com o sistema aberto.</li>
-                        <li>Nos outros computadores ou celulares, conecte no mesmo Wi-Fi.</li>
-                        <li>Abra o navegador e digite o <b>IP</b> mostrado na tela inicial do sistema.</li>
-                        <li>Pronto! Todos os dados são sincronizados em tempo real.</li>
-                    </ol>
-                </div>
-            </div>
-
+    <section class="interactive-banner">
+        <div class="banner-content">
+            <h2>Suporte Especializado</h2>
+            <p>Nossa equipe garante uma implantação tranquila e treinamento completo para sua portaria.</p>
         </div>
     </section>
 
     <section id="orcamento" class="big-contact-section">
         <div class="container">
             <div class="form-wrapper">
-                <h2>Solicite seu Orçamento</h2>
-                <p>Implemente a gestão inteligente no seu condomínio hoje mesmo.<br>Preencha os dados abaixo e fale diretamente conosco no WhatsApp.</p>
+                <h2>Leve essa tecnologia para seu condomínio</h2>
+                <p>Solicite um orçamento personalizado agora mesmo.</p>
                 
                 <form id="formZap">
                     <div class="form-grid">
                         <div class="input-box">
                             <label>Seu Nome</label>
-                            <input type="text" id="nome" placeholder="Digite seu nome completo" required>
+                            <input type="text" id="nome" placeholder="Nome completo" required>
                         </div>
                         <div class="input-box">
-                            <label>Nome do Condomínio</label>
-                            <input type="text" id="condominio" placeholder="Ex: Residencial Flores" required>
+                            <label>Condomínio</label>
+                            <input type="text" id="condominio" placeholder="Nome do condomínio" required>
                         </div>
                         <div class="input-box full-width">
-                            <label>Empresa / Administradora (Opcional)</label>
-                            <input type="text" id="empresa" placeholder="Nome da sua empresa">
+                            <label>Empresa (Opcional)</label>
+                            <input type="text" id="empresa" placeholder="Administradora ou Empresa">
                         </div>
                     </div>
                     
                     <button type="submit" class="btn-submit-big">
                         <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp">
-                        Solicitar Orçamento via WhatsApp
+                        Solicitar Orçamento no WhatsApp
                     </button>
-                    <p class="form-footer">Atendimento rápido e personalizado.</p>
                 </form>
             </div>
         </div>
