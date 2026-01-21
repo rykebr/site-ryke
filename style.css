@@ -11,10 +11,51 @@ header {
     border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 .logo { font-size: 20px; font-weight: 900; letter-spacing: 1px; color: #fff; }
+
+/* --- BOTÃO MOBILE (ESTILO FORÇADO) --- */
+.mobile-btn {
+    display: none; /* Escondido no PC */
+    cursor: pointer;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px;
+    z-index: 1100;
+    /* Garante que o botão tenha tamanho */
+    width: 45px; 
+    height: 45px;
+    justify-content: center;
+    align-items: center;
+    /* Borda transparente para depuração, se precisar */
+    border: 1px solid transparent; 
+}
+
+.bar {
+    width: 30px;
+    height: 3px;
+    background-color: #fff; /* Cor branca para contrastar com o fundo preto */
+    border-radius: 3px;
+    transition: 0.3s;
+    display: block; /* Garante que a barra apareça */
+}
+
+/* Navegação PC */
 nav a { color: #ccc; text-decoration: none; margin-left: 20px; font-weight: 600; font-size: 13px; text-transform: uppercase; transition: 0.3s; }
 nav a:hover, .btn-destaque { color: #fff; }
 .btn-login { border: 1px solid #fff; padding: 6px 15px; border-radius: 20px; }
 .btn-login:hover { background: #fff; color: #000; }
+
+/* --- WIDGET RELÓGIO --- */
+#relogio-widget {
+    position: fixed; top: 90px; right: 30px;
+    width: 160px; height: auto; z-index: 900; pointer-events: none;
+    animation: floatClock 4s ease-in-out infinite; filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));
+}
+#relogio-widget img { width: 100%; display: block; }
+#hora-atual {
+    position: absolute; top: 52%; right: 20px; transform: translateY(-50%);
+    font-family: 'Inter', sans-serif; font-weight: 900; font-size: 26px; color: #000; letter-spacing: 1px;
+}
+@keyframes floatClock { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 
 /* --- HERO SLIDER --- */
 .hero { position: relative; width: 100%; height: 100vh; overflow: hidden; z-index: 2; }
@@ -30,77 +71,40 @@ nav a:hover, .btn-destaque { color: #fff; }
 .nav-btn { width: 10px; height: 10px; border: 2px solid #fff; border-radius: 50%; cursor: pointer; }
 .nav-btn.active { background: #fff; }
 
-/* ==========================================================================
-   ESTILO ROCKSTAR (CORREÇÃO DE GAPS)
-   ========================================================================== */
-
+/* --- ROCKSTAR SECTION --- */
 .rockstar-section {
-    position: relative;
-    width: 100%;
-    min-height: 100vh; 
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 20px;
-    
-    /* TRUQUE DA MARGEM: Puxa 5px para cima para garantir sobreposição */
-    margin-top: -5px; 
-    z-index: 1; /* Garante ordem de empilhamento */
+    position: relative; width: 100%; min-height: 100vh; 
+    overflow: hidden; display: flex; align-items: center; justify-content: center;
+    padding: 0 20px; margin-top: -5px; z-index: 1;
 }
-
 .rockstar-bg {
-    position: absolute;
-    /* CORREÇÃO CRÍTICA: Altura maior que 100% para o Parallax não criar buracos */
-    top: -10%; 
-    left: 0;
-    width: 100%; 
-    height: 109%; 
-    
-    background-size: cover;
-    background-position: center;
-    z-index: 0;
-    will-change: transform, filter; 
-    transform: scale(1.1); 
+    position: absolute; top: -10%; left: 0; width: 100%; height: 120%; 
+    background-size: cover; background-position: center; z-index: 0;
+    will-change: transform, filter; transform: scale(1.1); 
 }
-
 .rockstar-overlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background: linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.8), rgba(0,0,0,0.4));
-    z-index: 1;
-    /* Previne cliques fantasmas e gaps visuais */
-    pointer-events: none; 
+    z-index: 1; pointer-events: none; 
 }
+.rockstar-content { position: relative; z-index: 2; width: 100%; max-width: 1200px; margin: 0 auto; padding: 80px 0; }
 
-.rockstar-content {
-    position: relative; z-index: 2; width: 100%; max-width: 1200px; margin: 0 auto;
-    padding: 80px 0; 
-}
-
-/* --- TEXTO CENTRALIZADO --- */
+/* Textos e Wrappers */
 .text-only-wrapper {
-    max-width: 800px;
-    margin: 0 auto;
-    text-align: center;
-    background: rgba(0,0,0,0.5); 
-    padding: 50px;
-    border-radius: 20px;
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255,255,255,0.1);
+    max-width: 800px; margin: 0 auto; text-align: center;
+    background: rgba(0,0,0,0.5); padding: 50px; border-radius: 20px;
+    backdrop-filter: blur(8px); border: 1px solid rgba(255,255,255,0.1);
     box-shadow: 0 20px 40px rgba(0,0,0,0.5);
 }
-
 .section-title { font-size: 48px; text-align: center; margin-bottom: 15px; font-weight: 800; color: #fff; text-shadow: 0 10px 20px rgba(0,0,0,0.5); }
 .subtitle { text-align: center; color: #e0e0e0; font-size: 22px; margin-bottom: 80px; text-shadow: 0 5px 10px rgba(0,0,0,0.5); font-weight: 500; }
-
 .banner-content { text-align: center; max-width: 900px; margin: 0 auto; }
 .banner-content h2 { font-size: 60px; font-weight: 900; color: #fff; margin-bottom: 20px; text-transform: uppercase; letter-spacing: -1px; line-height: 1; text-shadow: 0 10px 30px rgba(0,0,0,0.8); }
 .banner-content p { font-size: 26px; color: #f1f1f1; font-weight: 600; text-shadow: 0 5px 15px rgba(0,0,0,0.8); }
-
 .feature-text h4 { font-size: 42px; margin-bottom: 25px; color: #fff; font-weight: 800; line-height: 1.1; text-shadow: 0 5px 15px rgba(0,0,0,0.5); }
 .feature-text > p { font-size: 19px; color: #e0e0e0; margin-bottom: 35px; line-height: 1.6; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
 
-/* Lista de Passos */
+/* Steps */
 .step-list { display: flex; flex-direction: column; gap: 25px; text-align: left; }
 .step { display: flex; gap: 20px; align-items: flex-start; }
 .step-num {
@@ -112,13 +116,11 @@ nav a:hover, .btn-destaque { color: #fff; }
 .step p { font-size: 17px; color: #fff; line-height: 1.5; margin: 0; font-weight: 500; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 .step b { color: #fff; font-weight: 800; }
 
-/* Formulário */
+/* Form */
 .form-wrapper { 
-    max-width: 600px; margin: 0 auto; 
-    background: rgba(0, 0, 0, 0.6); 
+    max-width: 600px; margin: 0 auto; background: rgba(0, 0, 0, 0.6); 
     padding: 60px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); 
-    backdrop-filter: blur(20px);
-    box-shadow: 0 40px 100px rgba(0,0,0,0.8);
+    backdrop-filter: blur(20px); box-shadow: 0 40px 100px rgba(0,0,0,0.8);
 }
 .form-wrapper h2 { font-size: 32px; margin-bottom: 15px; color:#fff; }
 .form-wrapper p { color: #ccc; margin-bottom: 40px; }
@@ -127,7 +129,6 @@ nav a:hover, .btn-destaque { color: #fff; }
 .input-box input { width: 100%; padding: 16px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; color: #fff; outline: none; transition: 0.3s; font-size: 16px; }
 .input-box input:focus { border-color: #fd7e14; background: rgba(255,255,255,0.15); }
 .full-width { grid-column: span 2; }
-
 .btn-submit-big {
     width: 100%; padding: 20px; background-color: #25d366; color: #fff; font-size: 20px; font-weight: 800;
     border: none; border-radius: 12px; cursor: pointer; transition: 0.3s;
@@ -138,58 +139,34 @@ nav a:hover, .btn-destaque { color: #fff; }
 
 footer { padding: 50px; text-align: center; font-size: 14px; color: #666; background: #050505; position: relative; z-index: 3; }
 
-/* MOBILE */
+/* --- MOBILE QUERY --- */
 @media (max-width: 900px) {
+    /* Exibe o botão */
+    .mobile-btn { display: flex; }
+    
+    /* Configuração do Menu Mobile */
+    nav {
+        display: none; /* Escondido por padrão */
+        position: absolute;
+        top: 100%; left: 0; width: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        flex-direction: column; align-items: center;
+        padding: 30px 0; border-bottom: 1px solid rgba(255,255,255,0.1);
+        backdrop-filter: blur(10px); box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    }
+    nav.active { display: flex; }
+    
+    nav a { margin: 15px 0; font-size: 18px; margin-left: 0; }
+    .btn-login { margin-top: 10px; width: 80%; text-align: center; padding: 12px; }
+
+    /* Ajustes Gerais Mobile */
     .content h2, .banner-content h2, .feature-text h4 { font-size: 32px; }
     .rockstar-section { padding: 80px 20px; min-height: auto; }
     .form-wrapper { padding: 30px; }
     .form-grid { grid-template-columns: 1fr; }
     .full-width { grid-column: span 1; }
     header { padding: 15px 20px; }
-    nav { display: none; }
-}
-
-/* --- WIDGET RELÓGIO --- */
-#relogio-widget {
-    position: fixed;
-    /* Ajustado para ficar logo abaixo do cabeçalho sem atrapalhar o menu */
-    top: 90px; 
-    right: 30px;
-    width: 160px; /* Tamanho ajustado para não ficar gigante */
-    height: auto;
-    z-index: 900; /* Fica acima do conteúdo, mas abaixo de modais se houver */
-    pointer-events: none; /* Permite clicar através dele se necessário */
     
-    /* Animação suave de flutuação */
-    animation: floatClock 4s ease-in-out infinite;
-    filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));
-}
-
-#relogio-widget img {
-    width: 100%;
-    display: block;
-}
-
-#hora-atual {
-    position: absolute;
-    top: 52%; /* Centraliza verticalmente */
-    right: 20px; /* Ajuste fino para cair na área cinza da imagem */
-    transform: translateY(-50%);
-    
-    font-family: 'Inter', sans-serif; /* Mesma fonte do site */
-    font-weight: 900;
-    font-size: 26px;
-    color: #000; /* Texto preto como no print */
-    letter-spacing: 1px;
-}
-
-/* Animação de Flutuar */
-@keyframes floatClock {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-8px); }
-}
-
-/* Esconder no celular para não tapar conteúdo */
-@media (max-width: 900px) {
+    /* Esconde o relógio no celular para não tapar o menu */
     #relogio-widget { display: none; }
 }
