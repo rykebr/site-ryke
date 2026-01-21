@@ -38,32 +38,31 @@ document.getElementById('formZap').addEventListener('submit', function(e) {
 });
 
 // ======================================================
-// EFEITO ROCKSTAR (BLUR E FADE NO SCROLL)
+// EFEITO ROCKSTAR V2 (NITIDEZ PROLONGADA + TRANSIÇÃO SUAVE)
 // ======================================================
 
 document.addEventListener("DOMContentLoaded", () => {
     const sections = document.querySelectorAll(".rockstar-section");
 
-    // 1. Prepara as seções (Injeta o BG e Overlay)
+    // 1. Prepara as seções (Injeta o BG fixo)
     sections.forEach(sec => {
         const imgSrc = sec.getAttribute("data-bg");
         if (imgSrc) {
-            // Cria o elemento de fundo
+            // Cria o elemento de fundo fixo
             const bgDiv = document.createElement("div");
             bgDiv.classList.add("rockstar-bg");
             bgDiv.style.backgroundImage = `url('${imgSrc}')`;
             
-            // Cria a camada escura
+            // Camada escura
             const overlayDiv = document.createElement("div");
             overlayDiv.classList.add("rockstar-overlay");
 
-            // Insere no começo da seção
             sec.prepend(overlayDiv);
             sec.prepend(bgDiv);
         }
     });
 
-    // 2. Função de Animação
+    // 2. Função de Animação Otimizada
     function onScroll() {
         const viewHeight = window.innerHeight;
         const centerView = viewHeight / 2;
@@ -73,43 +72,53 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!bg) return;
 
             const rect = sec.getBoundingClientRect();
-            
-            // Ponto central da seção
             const sectionCenter = rect.top + (rect.height / 2);
             
             // Distância do centro da seção até o centro da tela
+            // Valor negativo = seção subindo (saindo por cima)
+            // Valor positivo = seção descendo (saindo por baixo)
             const dist = sectionCenter - centerView;
             
-            // Efeito Parallax (Move a imagem um pouco para dar profundidade)
-            // Se rect.top for negativo (subindo), move o BG para baixo (positivo) devagar
-            const parallaxY = rect.top * 0.4; 
-            
-            // Cálculo do Desfoque e Opacidade
-            // Quanto mais longe do centro, mais desfocado e transparente
-            // 600px de distância = 100% efeito
-            const maxDist = viewHeight * 0.7; 
-            let percent = Math.abs(dist) / maxDist;
-            
-            // Limita porcentagem entre 0 e 1
-            if (percent > 1) percent = 1;
-            
-            // Aplica os efeitos
-            // Se estiver no centro (percent=0): Blur 0px, Opacidade 1
-            // Se estiver longe (percent=1): Blur 15px, Opacidade 0.2
-            
-            const blurAmount = percent * 20; // Máximo 20px de blur
-            let opacityAmount = 1 - (percent * 0.8); // Mínimo 0.2 de opacidade para não sumir total
-            
-            if (opacityAmount < 0) opacityAmount = 0;
+            // Normaliza a distância (0 = centro, 1 = borda da tela)
+            let normalizedDist = Math.abs(dist) / (viewHeight * 0.85); // 0.85 aumenta a zona ativa
 
-            // Aplica estilos
-            bg.style.transform = `translate3d(0, ${parallaxY}px, 0) scale(1.1)`; // Scale evita bordas brancas no movimento
+            // --- AQUI ESTÁ O SEGREDO DA NITIDEZ ---
+            // Zona Segura: Se a distância for pequena (ex: < 0.3), mantém 100% nítido
+            let effectStartThreshold = 0.35; 
+            
+            let effectFactor = 0;
+            if (normalizedDist > effectStartThreshold) {
+                // Calcula o efeito apenas para a parte que excede o limite
+                effectFactor = (normalizedDist - effectStartThreshold) / (1 - effectStartThreshold);
+            }
+            
+            // Limita o fator entre 0 e 1
+            if (effectFactor < 0) effectFactor = 0;
+            if (effectFactor > 1) effectFactor = 1;
+
+            // APLICAÇÃO DOS EFEITOS
+            // 1. Blur: Começa suave e aumenta (Máximo 15px, não muito exagerado)
+            const blurAmount = effectFactor * 15; 
+            
+            // 2. Opacidade: Mantém alta por mais tempo. Mínimo de 0.4 para evitar fundo preto total.
+            // A transição será feita pela sobreposição da próxima seção vindo por cima.
+            let opacityAmount = 1 - (effectFactor * 0.6); 
+            
+            // 3. Scale: Dá um leve zoom quando sai para dar sensação de movimento
+            let scaleAmount = 1.1 + (effectFactor * 0.1);
+
+            // 4. Parallax Leve: Move o fundo um pouco para "alongar" a imagem
+            // Se está subindo (dist < 0), move imagem para baixo (+)
+            const parallaxY = dist * 0.15; 
+
+            // Aplica os estilos com aceleração de hardware (translate3d)
+            bg.style.transform = `translate3d(0, ${parallaxY}px, 0) scale(${scaleAmount})`;
             bg.style.filter = `blur(${blurAmount}px)`;
-            bg.style.opacity = opacityAmount;
+            bg.style.opacity = opacityAmount.toFixed(2);
         });
     }
 
-    // Otimiza o evento de scroll
+    // Loop de renderização suave
     let ticking = false;
     window.addEventListener("scroll", () => {
         if (!ticking) {
@@ -121,6 +130,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
     
-    // Chama uma vez para iniciar
+    // Inicia
     onScroll();
 });
