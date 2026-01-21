@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu Principal - Ryke Sistemas</title>
+    <link rel="stylesheet" href="style_demo.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap" rel="stylesheet">
+    <style>
+        #relogio-topo {
+            margin: 0 auto 20px; width: 182px; height: 75px;
+            background-image: url('../img/relogio.png'); background-size: 100% 100%;
+            display: flex; align-items: center; justify-content: center;
+            padding-left: 40px; padding-top: 5px; box-sizing: border-box;
+        }
+        #relogio-texto { font-family: 'Orbitron', monospace; font-size: 30px; color: #000; text-shadow: 0 0 2px rgba(0,0,0,0.2); }
+        .dashboard { background: #212529; border-radius: 12px; padding: 15px; margin-top: 25px; color: #fff; font-size: 0.9em; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .stat-card { background: #343a40; padding: 10px; border-radius: 6px; text-align: center; border: 1px solid #495057; }
+        .stat-val { font-size: 1.4em; font-weight: bold; color: #0dcaf0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <div id="relogio-topo">
+            <span id="relogio-texto">--:--</span>
+        </div>
+
+        <div class="logo-container">
+            <img src="../img/logo.png" alt="Logo">
+        </div>
+
+        <div class="area-botoes">
+            <a href="cadastrar.html" class="btn btn-blue">📷 Nova Encomenda</a>
+            <a href="baixa.html" class="btn btn-green">✍️ Retirada</a>
+            <a href="#" onclick="alert('Funcionalidade disponível na versão completa!')" class="btn btn-purple">🔍 Pesquisar</a>
+            <a href="manutencao.html" class="btn" style="background-color: #ffc107; color: #333;">🛠️ Manutenção</a>
+            <a href="../index.html" class="btn btn-gray">⬅️ Voltar ao Site</a>
+        </div>
+
+        <div class="dashboard">
+            <div style="font-weight: bold; color: #0d6efd; border-bottom: 1px solid #444; padding-bottom: 5px;">
+                📊 Monitoramento (Demonstração)
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-val">12</div>
+                    <div class="stat-lbl">Entradas Hoje</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-val" style="color: #198754;">8</div>
+                    <div class="stat-lbl">Saídas Hoje</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function atualizarRelogio() {
+            const agora = new Date();
+            const horas = String(agora.getHours()).padStart(2, '0');
+            const minutos = String(agora.getMinutes()).padStart(2, '0');
+            document.getElementById('relogio-texto').innerText = `${horas}:${minutos}`;
+        }
+        setInterval(atualizarRelogio, 1000);
+        atualizarRelogio();
+    </script>
+</body>
+</html>

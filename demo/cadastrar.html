@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova Encomenda</title>
+    <link rel="stylesheet" href="style_demo.css">
+</head>
+<body>
+    <div class="container">
+        <div class="logo-container"><img src="../img/logo.png"></div>
+        <h3>📷 Nova Encomenda</h3>
+
+        <form onsubmit="salvarFake(event)">
+            <label>Unidade:</label>
+            <div style="display: flex; gap: 8px;">
+                <input type="text" id="uni" placeholder="Ex: 10-205" required>
+                <button type="button" class="btn btn-blue" style="width: auto;" onclick="buscarFake()">🔍</button>
+            </div>
+            
+            <label>Morador:</label>
+            <input type="text" id="nom" placeholder="Nome do morador" required>
+
+            <label>Email:</label>
+            <input type="email" id="mail" placeholder="email@exemplo.com">
+            
+            <label>Objeção/Código:</label>
+            <input type="text" id="obs" placeholder="Código de barras ou rastreio">
+            
+            <button type="submit" class="btn btn-green">💾 Simular Salvamento</button>
+        </form>
+        
+        <a href="index.html" class="btn btn-gray">Voltar</a>
+    </div>
+
+    <script>
+        function buscarFake() {
+            const uni = document.getElementById('uni').value;
+            if(uni) {
+                document.getElementById('nom').value = "Morador Exemplo da Silva";
+                document.getElementById('mail').value = "morador@exemplo.com";
+                alert("Simulação: Morador encontrado no banco de dados!");
+            } else {
+                alert("Digite uma unidade para testar.");
+            }
+        }
+
+        function salvarFake(e) {
+            e.preventDefault();
+            alert("✅ Sucesso! \n\nNo sistema real, isso salvaria no banco de dados, tiraria foto da webcam e enviaria um e-mail automático para o morador.");
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>

@@ -13,18 +13,17 @@
         <div class="logo">RYKE SISTEMAS</div>
         <nav>
             <a href="#home">Início</a>
-            <a href="#sistemas">Sistemas</a>
-            <a href="https://rykesistema.loophole.site/" class="btn-login" target="_blank">Acessar Sistema</a>
+            <a href="#orcamento">Orçamento</a>
+            <a href="demo/index.html" class="btn-login">Acessar Demonstração</a>
         </nav>
     </header>
 
     <section id="home" class="hero">
-        
         <div class="slide active" style="background-image: url('img/banner-encomendas.png');">
             <div class="content">
                 <h2>Sistema de Encomendas</h2>
                 <p>Gestão completa de recebimento e entrega com notificações automáticas.</p>
-                <a href="https://rykesistema.loophole.site/" class="btn-hero">Acessar Demonstração</a>
+                <a href="#orcamento" class="btn-hero">Solicitar Orçamento</a>
             </div>
         </div>
 
@@ -32,13 +31,33 @@
             <div class="content">
                 <h2>Gestão de Manutenção</h2>
                 <p>Controle de chamados, prestadores de serviço e histórico detalhado.</p>
-                <a href="#" class="btn-hero">Saiba Mais</a>
+                <a href="#orcamento" class="btn-hero">Falar com Consultor</a>
             </div>
         </div>
 
         <div class="slider-nav">
             <div class="nav-btn active" onclick="manualSlide(0)"></div>
             <div class="nav-btn" onclick="manualSlide(1)"></div>
+        </div>
+    </section>
+
+    <section id="orcamento" class="contact-section">
+        <div class="contact-container">
+            <h2>Solicite seu Orçamento</h2>
+            <p>Preencha os dados abaixo e fale diretamente conosco no WhatsApp.</p>
+            
+            <form id="formZap">
+                <div class="input-group">
+                    <input type="text" id="nome" placeholder="Seu Nome" required>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="empresa" placeholder="Empresa (Opcional)">
+                </div>
+                <div class="input-group">
+                    <input type="text" id="condominio" placeholder="Nome do Condomínio" required>
+                </div>
+                <button type="submit" class="btn-submit">Enviar para WhatsApp <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" width="20" style="vertical-align:middle; margin-left:5px;"></button>
+            </form>
         </div>
     </section>
 

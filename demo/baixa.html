@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retirada</title>
+    <link rel="stylesheet" href="style_demo.css">
+    <style>
+        .item-row { background: white; padding: 10px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-container"><img src="../img/logo.png"></div>
+        <h3>✍️ Retirada de Encomenda</h3>
+
+        <input type="text" id="bus" placeholder="Digite a unidade (Ex: 101)...">
+        <button onclick="buscarPendencias()" class="btn btn-purple">Buscar Pendentes</button>
+
+        <div id="lista" style="margin-top: 20px; display: none;">
+            <div style="background: #e7f3ff; padding: 10px; border-radius: 5px; margin-bottom: 10px; font-weight: bold; color: #0d6efd;">
+                2 Encomendas encontradas:
+            </div>
+
+            <div class="item-row">
+                <input type="checkbox">
+                <div>
+                    <div><strong>Encomenda:</strong> CX Amazon</div>
+                    <div style="font-size: 12px; color: #666;">Chegou: Hoje às 10:30</div>
+                </div>
+            </div>
+
+            <div class="item-row">
+                <input type="checkbox">
+                <div>
+                    <div><strong>Encomenda:</strong> Envelope Mercado Livre</div>
+                    <div style="font-size: 12px; color: #666;">Chegou: Ontem às 18:00</div>
+                </div>
+            </div>
+
+            <label style="margin-top: 15px;">Quem está retirando?</label>
+            <input type="text" placeholder="Nome do retirante">
+            
+            <div style="border: 2px dashed #ccc; height: 100px; background: white; display: flex; align-items: center; justify-content: center; color: #999; margin-bottom: 10px;">
+                (Área da Assinatura Digital)
+            </div>
+
+            <button class="btn btn-blue" onclick="alert('Baixa realizada! O morador receberá um e-mail de confirmação.')">Confirmar Baixa</button>
+        </div>
+
+        <a href="index.html" class="btn btn-gray" style="margin-top: 15px;">Voltar</a>
+    </div>
+
+    <script>
+        function buscarPendencias() {
+            document.getElementById('lista').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
