@@ -31,7 +31,7 @@ nav a:hover, .btn-destaque { color: #fff; }
 .nav-btn.active { background: #fff; }
 
 /* ==========================================================================
-   ESTILO ROCKSTAR (SEM LINHAS PRETAS)
+   ESTILO ROCKSTAR (CORREÇÃO DE GAPS)
    ========================================================================== */
 
 .rockstar-section {
@@ -44,17 +44,19 @@ nav a:hover, .btn-destaque { color: #fff; }
     justify-content: center;
     padding: 0 20px;
     
-    /* --- CORREÇÃO DA LINHA PRETA --- */
-    /* Puxa a seção 2px para cima para sobrepor a anterior */
-    margin-top: -2px; 
-    /* Adiciona padding extra para compensar se necessário */
-    padding-top: 2px;
+    /* TRUQUE DA MARGEM: Puxa 5px para cima para garantir sobreposição */
+    margin-top: -5px; 
+    z-index: 1; /* Garante ordem de empilhamento */
 }
 
 .rockstar-bg {
     position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+    /* CORREÇÃO CRÍTICA: Altura maior que 100% para o Parallax não criar buracos */
+    top: -10%; 
+    left: 0;
+    width: 100%; 
+    height: 120%; 
+    
     background-size: cover;
     background-position: center;
     z-index: 0;
@@ -64,9 +66,10 @@ nav a:hover, .btn-destaque { color: #fff; }
 
 .rockstar-overlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    /* Gradiente mais forte para leitura do texto centralizado */
     background: linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.8), rgba(0,0,0,0.4));
     z-index: 1;
+    /* Previne cliques fantasmas e gaps visuais */
+    pointer-events: none; 
 }
 
 .rockstar-content {
@@ -74,16 +77,17 @@ nav a:hover, .btn-destaque { color: #fff; }
     padding: 80px 0; 
 }
 
-/* --- TEXTO CENTRALIZADO (QUANDO NÃO TEM FOTO) --- */
+/* --- TEXTO CENTRALIZADO --- */
 .text-only-wrapper {
     max-width: 800px;
     margin: 0 auto;
     text-align: center;
-    background: rgba(0,0,0,0.4); /* Fundo leve para destacar o texto */
-    padding: 40px;
+    background: rgba(0,0,0,0.5); 
+    padding: 50px;
     border-radius: 20px;
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(8px);
     border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.5);
 }
 
 .section-title { font-size: 48px; text-align: center; margin-bottom: 15px; font-weight: 800; color: #fff; text-shadow: 0 10px 20px rgba(0,0,0,0.5); }
@@ -93,12 +97,11 @@ nav a:hover, .btn-destaque { color: #fff; }
 .banner-content h2 { font-size: 60px; font-weight: 900; color: #fff; margin-bottom: 20px; text-transform: uppercase; letter-spacing: -1px; line-height: 1; text-shadow: 0 10px 30px rgba(0,0,0,0.8); }
 .banner-content p { font-size: 26px; color: #f1f1f1; font-weight: 600; text-shadow: 0 5px 15px rgba(0,0,0,0.8); }
 
-/* Estilos de Texto dentro dos blocos */
 .feature-text h4 { font-size: 42px; margin-bottom: 25px; color: #fff; font-weight: 800; line-height: 1.1; text-shadow: 0 5px 15px rgba(0,0,0,0.5); }
 .feature-text > p { font-size: 19px; color: #e0e0e0; margin-bottom: 35px; line-height: 1.6; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
 
-/* Centraliza lista de passos */
-.step-list { display: flex; flex-direction: column; gap: 25px; text-align: left; /* Passos ficam alinhados a esquerda dentro do bloco central */ }
+/* Lista de Passos */
+.step-list { display: flex; flex-direction: column; gap: 25px; text-align: left; }
 .step { display: flex; gap: 20px; align-items: flex-start; }
 .step-num {
     background: #fd7e14; color: #fff; width: 36px; height: 36px;
