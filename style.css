@@ -55,7 +55,7 @@ nav a:hover, .btn-destaque { color: #fff; }
     top: -10%; 
     left: 0;
     width: 100%; 
-    height: 120%; 
+    height: 109%; 
     
     background-size: cover;
     background-position: center;
@@ -147,4 +147,49 @@ footer { padding: 50px; text-align: center; font-size: 14px; color: #666; backgr
     .full-width { grid-column: span 1; }
     header { padding: 15px 20px; }
     nav { display: none; }
+}
+
+/* --- WIDGET RELÓGIO --- */
+#relogio-widget {
+    position: fixed;
+    /* Ajustado para ficar logo abaixo do cabeçalho sem atrapalhar o menu */
+    top: 90px; 
+    right: 30px;
+    width: 160px; /* Tamanho ajustado para não ficar gigante */
+    height: auto;
+    z-index: 900; /* Fica acima do conteúdo, mas abaixo de modais se houver */
+    pointer-events: none; /* Permite clicar através dele se necessário */
+    
+    /* Animação suave de flutuação */
+    animation: floatClock 4s ease-in-out infinite;
+    filter: drop-shadow(0 10px 10px rgba(0,0,0,0.5));
+}
+
+#relogio-widget img {
+    width: 100%;
+    display: block;
+}
+
+#hora-atual {
+    position: absolute;
+    top: 52%; /* Centraliza verticalmente */
+    right: 20px; /* Ajuste fino para cair na área cinza da imagem */
+    transform: translateY(-50%);
+    
+    font-family: 'Inter', sans-serif; /* Mesma fonte do site */
+    font-weight: 900;
+    font-size: 26px;
+    color: #000; /* Texto preto como no print */
+    letter-spacing: 1px;
+}
+
+/* Animação de Flutuar */
+@keyframes floatClock {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+/* Esconder no celular para não tapar conteúdo */
+@media (max-width: 900px) {
+    #relogio-widget { display: none; }
 }

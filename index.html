@@ -9,12 +9,24 @@
 </head>
 <body>
 
-    <header>
+	<div id="relogio-widget">
+        <img src="img/relogio.png" alt="Horário do Sistema">
+        <span id="hora-atual">00:00</span>
+    </div>	
+
+<header>
         <div class="logo">RYKE SISTEMAS</div>
-        <nav>
-            <a href="#home">Início</a>
-            <a href="#guia">Como Funciona</a>
-            <a href="#orcamento" class="btn-destaque">Orçamento</a>
+        
+        <div class="mobile-btn" onclick="toggleMenu()">
+            <div class="bar"></div>
+            <div class="bar"></div>
+            <div class="bar"></div>
+        </div>
+
+        <nav id="nav-menu">
+            <a href="#home" onclick="toggleMenu()">Início</a>
+            <a href="#guia" onclick="toggleMenu()">Como Funciona</a>
+            <a href="#orcamento" class="btn-destaque" onclick="toggleMenu()">Orçamento</a>
             <a href="https://rykesistema.loophole.site/" class="btn-login" target="_blank">Acessar Demonstração</a>
         </nav>
     </header>

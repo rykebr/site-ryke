@@ -1,4 +1,6 @@
-// --- LÓGICA DO SLIDER PRINCIPAL (HERO) ---
+// ======================================================
+// 1. LÓGICA DO SLIDER PRINCIPAL (HERO)
+// ======================================================
 const slides = document.querySelectorAll('.slide');
 const navBtns = document.querySelectorAll('.nav-btn');
 let currentSlide = 0;
@@ -25,22 +27,44 @@ function manualSlide(index) {
     autoPlay = setInterval(nextSlide, slideInterval);
 }
 
-// --- LÓGICA DO WHATSAPP ---
+// ======================================================
+// 2. LÓGICA DO FORMULÁRIO WHATSAPP
+// ======================================================
 document.getElementById('formZap').addEventListener('submit', function(e) {
     e.preventDefault();
     let nome = document.getElementById('nome').value;
     let empresa = document.getElementById('empresa').value || "Particular";
     let condominio = document.getElementById('condominio').value;
     let telefone = "5515981618716";
+    
     let texto = `Olá! Vim pelo site da Ryke Sistemas.\n\n*Nome:* ${nome}\n*Condomínio:* ${condominio}\n*Empresa:* ${empresa}\n\nGostaria de solicitar um orçamento.`;
+    
     let link = `https://api.whatsapp.com/send?phone=${telefone}&text=${encodeURIComponent(texto)}`;
     window.open(link, '_blank');
 });
 
 // ======================================================
-// EFEITO ROCKSTAR V2 (NITIDEZ PROLONGADA + TRANSIÇÃO SUAVE)
+// 3. WIDGET RELÓGIO (TEMPO REAL)
 // ======================================================
+function atualizarRelogio() {
+    const now = new Date();
+    // Pega hora e minuto e garante que tenha 2 dígitos (ex: 09:05)
+    const horas = String(now.getHours()).padStart(2, '0');
+    const minutos = String(now.getMinutes()).padStart(2, '0');
+    
+    const elementoRelogio = document.getElementById('hora-atual');
+    if (elementoRelogio) {
+        elementoRelogio.textContent = `${horas}:${minutos}`;
+    }
+}
 
+// Atualiza a cada 1 segundo e chama imediatamente
+setInterval(atualizarRelogio, 1000);
+atualizarRelogio();
+
+// ======================================================
+// 4. EFEITO ROCKSTAR V2 (NITIDEZ PROLONGADA + SEM GAPS)
+// ======================================================
 document.addEventListener("DOMContentLoaded", () => {
     const sections = document.querySelectorAll(".rockstar-section");
 
@@ -75,15 +99,13 @@ document.addEventListener("DOMContentLoaded", () => {
             const sectionCenter = rect.top + (rect.height / 2);
             
             // Distância do centro da seção até o centro da tela
-            // Valor negativo = seção subindo (saindo por cima)
-            // Valor positivo = seção descendo (saindo por baixo)
             const dist = sectionCenter - centerView;
             
             // Normaliza a distância (0 = centro, 1 = borda da tela)
-            let normalizedDist = Math.abs(dist) / (viewHeight * 0.85); // 0.85 aumenta a zona ativa
+            let normalizedDist = Math.abs(dist) / (viewHeight * 0.85); 
 
-            // --- AQUI ESTÁ O SEGREDO DA NITIDEZ ---
-            // Zona Segura: Se a distância for pequena (ex: < 0.3), mantém 100% nítido
+            // --- SEGREDO DA NITIDEZ ---
+            // Zona Segura: Até 35% de distância do centro, a imagem fica perfeita
             let effectStartThreshold = 0.35; 
             
             let effectFactor = 0;
@@ -97,21 +119,19 @@ document.addEventListener("DOMContentLoaded", () => {
             if (effectFactor > 1) effectFactor = 1;
 
             // APLICAÇÃO DOS EFEITOS
-            // 1. Blur: Começa suave e aumenta (Máximo 15px, não muito exagerado)
+            // 1. Blur: Máximo 15px
             const blurAmount = effectFactor * 15; 
             
-            // 2. Opacidade: Mantém alta por mais tempo. Mínimo de 0.4 para evitar fundo preto total.
-            // A transição será feita pela sobreposição da próxima seção vindo por cima.
+            // 2. Opacidade: Cai só até 0.4 para evitar fundo preto
             let opacityAmount = 1 - (effectFactor * 0.6); 
             
-            // 3. Scale: Dá um leve zoom quando sai para dar sensação de movimento
+            // 3. Scale: Zoom leve para movimento
             let scaleAmount = 1.1 + (effectFactor * 0.1);
 
-            // 4. Parallax Leve: Move o fundo um pouco para "alongar" a imagem
-            // Se está subindo (dist < 0), move imagem para baixo (+)
+            // 4. Parallax: Move o fundo verticalmente
             const parallaxY = dist * 0.15; 
 
-            // Aplica os estilos com aceleração de hardware (translate3d)
+            // Aplica os estilos
             bg.style.transform = `translate3d(0, ${parallaxY}px, 0) scale(${scaleAmount})`;
             bg.style.filter = `blur(${blurAmount}px)`;
             bg.style.opacity = opacityAmount.toFixed(2);
@@ -130,6 +150,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
     
-    // Inicia
+    // Inicia a animação
     onScroll();
 });
