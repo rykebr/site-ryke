@@ -7,9 +7,8 @@ body { background-color: #000; color: #fff; overflow-x: hidden; }
 header {
     position: fixed; top: 0; width: 100%; z-index: 1000;
     display: flex; justify-content: space-between; align-items: center;
-    padding: 15px 50px; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    transition: background 0.3s;
+    padding: 15px 50px; background: rgba(0,0,0,0.8); backdrop-filter: blur(15px);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
 }
 .logo { font-size: 20px; font-weight: 900; letter-spacing: 1px; color: #fff; }
 nav a { color: #ccc; text-decoration: none; margin-left: 20px; font-weight: 600; font-size: 13px; text-transform: uppercase; transition: 0.3s; }
@@ -32,25 +31,26 @@ nav a:hover, .btn-destaque { color: #fff; }
 .nav-btn.active { background: #fff; }
 
 /* ==========================================================================
-   ESTILO ROCKSTAR (V2 - SEM GAPS)
+   ESTILO ROCKSTAR (SEM LINHAS PRETAS)
    ========================================================================== */
 
 .rockstar-section {
     position: relative;
     width: 100%;
-    /* MUDANÇA: Ocupa a tela inteira para evitar buracos pretos */
     min-height: 100vh; 
     overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Remove padding vertical para colar as seções */
-    padding: 0 20px; 
-    /* Garante que as bordas se toquem */
-    margin: 0;
+    padding: 0 20px;
+    
+    /* --- CORREÇÃO DA LINHA PRETA --- */
+    /* Puxa a seção 2px para cima para sobrepor a anterior */
+    margin-top: -2px; 
+    /* Adiciona padding extra para compensar se necessário */
+    padding-top: 2px;
 }
 
-/* Onde a imagem de fundo fica */
 .rockstar-bg {
     position: absolute;
     top: 0; left: 0;
@@ -59,26 +59,33 @@ nav a:hover, .btn-destaque { color: #fff; }
     background-position: center;
     z-index: 0;
     will-change: transform, filter; 
-    /* Começa levemente ampliada para permitir movimento sem borda branca */
     transform: scale(1.1); 
 }
 
-/* Camada escura */
 .rockstar-overlay {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    /* Gradiente suave para leitura, mas mantendo a imagem visível */
-    background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7));
+    /* Gradiente mais forte para leitura do texto centralizado */
+    background: linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.8), rgba(0,0,0,0.4));
     z-index: 1;
 }
 
-/* O Conteúdo */
 .rockstar-content {
     position: relative; z-index: 2; width: 100%; max-width: 1200px; margin: 0 auto;
-    /* Padding interno para o texto não colar nas bordas */
     padding: 80px 0; 
 }
 
-/* --- TIPOGRAFIA E ELEMENTOS --- */
+/* --- TEXTO CENTRALIZADO (QUANDO NÃO TEM FOTO) --- */
+.text-only-wrapper {
+    max-width: 800px;
+    margin: 0 auto;
+    text-align: center;
+    background: rgba(0,0,0,0.4); /* Fundo leve para destacar o texto */
+    padding: 40px;
+    border-radius: 20px;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
 .section-title { font-size: 48px; text-align: center; margin-bottom: 15px; font-weight: 800; color: #fff; text-shadow: 0 10px 20px rgba(0,0,0,0.5); }
 .subtitle { text-align: center; color: #e0e0e0; font-size: 22px; margin-bottom: 80px; text-shadow: 0 5px 10px rgba(0,0,0,0.5); font-weight: 500; }
 
@@ -86,24 +93,12 @@ nav a:hover, .btn-destaque { color: #fff; }
 .banner-content h2 { font-size: 60px; font-weight: 900; color: #fff; margin-bottom: 20px; text-transform: uppercase; letter-spacing: -1px; line-height: 1; text-shadow: 0 10px 30px rgba(0,0,0,0.8); }
 .banner-content p { font-size: 26px; color: #f1f1f1; font-weight: 600; text-shadow: 0 5px 15px rgba(0,0,0,0.8); }
 
-.feature-row { display: flex; align-items: center; justify-content: space-between; gap: 80px; }
-.feature-row.reverse { flex-direction: row-reverse; }
-
-.feature-img { flex: 1; }
-.feature-img img {
-    width: 100%; border-radius: 16px;
-    /* Sombra forte para destacar do fundo */
-    box-shadow: 0 40px 80px rgba(0,0,0,0.6);
-    border: 1px solid rgba(255,255,255,0.1);
-    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-}
-.feature-img img:hover { transform: scale(1.03); }
-
-.feature-text { flex: 1; text-align: left; }
+/* Estilos de Texto dentro dos blocos */
 .feature-text h4 { font-size: 42px; margin-bottom: 25px; color: #fff; font-weight: 800; line-height: 1.1; text-shadow: 0 5px 15px rgba(0,0,0,0.5); }
 .feature-text > p { font-size: 19px; color: #e0e0e0; margin-bottom: 35px; line-height: 1.6; text-shadow: 0 2px 5px rgba(0,0,0,0.5); }
 
-.step-list { display: flex; flex-direction: column; gap: 25px; }
+/* Centraliza lista de passos */
+.step-list { display: flex; flex-direction: column; gap: 25px; text-align: left; /* Passos ficam alinhados a esquerda dentro do bloco central */ }
 .step { display: flex; gap: 20px; align-items: flex-start; }
 .step-num {
     background: #fd7e14; color: #fff; width: 36px; height: 36px;
@@ -114,10 +109,10 @@ nav a:hover, .btn-destaque { color: #fff; }
 .step p { font-size: 17px; color: #fff; line-height: 1.5; margin: 0; font-weight: 500; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
 .step b { color: #fff; font-weight: 800; }
 
-/* Formulário Translucido */
+/* Formulário */
 .form-wrapper { 
     max-width: 600px; margin: 0 auto; 
-    background: rgba(0, 0, 0, 0.6); /* Mais transparente */
+    background: rgba(0, 0, 0, 0.6); 
     padding: 60px; border-radius: 24px; border: 1px solid rgba(255,255,255,0.1); 
     backdrop-filter: blur(20px);
     box-shadow: 0 40px 100px rgba(0,0,0,0.8);
@@ -142,8 +137,7 @@ footer { padding: 50px; text-align: center; font-size: 14px; color: #666; backgr
 
 /* MOBILE */
 @media (max-width: 900px) {
-    .feature-row, .feature-row.reverse { flex-direction: column; gap: 40px; text-align: left; }
-    .content h2, .banner-content h2, .feature-text h4 { font-size: 36px; }
+    .content h2, .banner-content h2, .feature-text h4 { font-size: 32px; }
     .rockstar-section { padding: 80px 20px; min-height: auto; }
     .form-wrapper { padding: 30px; }
     .form-grid { grid-template-columns: 1fr; }
