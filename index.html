@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,164 +10,152 @@
 <body>
 
     <div id="relogio-widget">
-        <img src="img/relogio.png" alt="Horário do Sistema">
+        <img src="img/relogio.png" alt="Horário">
         <span id="hora-atual">00:00</span>
     </div>
 
-    <header>
-        <div class="logo">RYKE SISTEMAS</div>
-        
-        <div class="mobile-btn" onclick="toggleMenu()">
-            <div class="bar"></div>
-            <div class="bar"></div>
-            <div class="bar"></div>
+    <header class="navbar">
+        <div class="nav-left">
+            <button class="menu-btn" id="menu-toggle">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
+            </button>
+            <div class="logo">
+                <span style="font-family: 'Inter', sans-serif; font-weight: 900; font-size: 24px; color: #fff;">RYKE</span>
+            </div>
         </div>
-
-        <nav id="nav-menu">
-            <a href="#home">Início</a>
-            <a href="#guia">Como Funciona</a>
-            <a href="#orcamento" class="btn-destaque">Orçamento</a>
-            <a href="https://rykesistema.loophole.site/" class="btn-login" target="_blank">Acessar Demonstração</a>
-        </nav>
+        
+        <div class="nav-right">
+            <a href="https://rykesistema.loophole.site/" target="_blank" class="nav-link btn-login-nav">Acessar Demo</a>
+        </div>
     </header>
 
-    <section id="home" class="hero">
-        <div class="slide active" style="background-image: url('img/banner-encomendas.png');">
-            <div class="content">
-                <h2>Controle Total do seu Condomínio</h2>
-                <p>Gestão de encomendas, manutenção e portaria em um único sistema.</p>
-                <a href="#guia" class="btn-hero">Ver Recursos</a>
+    <div class="sidebar" id="sidebar">
+        <ul>
+            <li><a href="#hero">Início</a></li>
+            <li><a href="#recursos">Como Funciona</a></li>
+            <li><a href="#funcionalidades">Funcionalidades</a></li>
+            <li><a href="#orcamento">Orçamento</a></li>
+            <li><a href="https://rykesistema.loophole.site/" target="_blank">Área do Cliente</a></li>
+        </ul>
+    </div>
+
+    <main>
+        <section class="hero" id="hero">
+            <div class="hero-content">
+                <div class="hero-tag">Gestão de Condomínios</div>
+                <h1>Controle Total do seu<br>Condomínio</h1>
+                <p style="color: #ddd; margin-bottom: 20px; font-size: 18px;">Gestão de encomendas, manutenção e portaria em um único sistema.</p>
+                <div class="cta-buttons">
+                    <a href="#recursos" class="btn btn-primary">Ver Recursos</a>
+                    <a href="#orcamento" class="btn btn-outline">Orçamento</a>
+                </div>
             </div>
-        </div>
-        <div class="slide" style="background-image: url('img/banner-manutencao.png');">
-            <div class="content">
-                <h2>Gestão de Manutenção</h2>
-                <p>Organize chamados, preventivas e histórico com fotos.</p>
-                <a href="#guia" class="btn-hero">Saiba Mais</a>
-            </div>
-        </div>
-        <div class="slider-nav">
-            <div class="nav-btn active" onclick="manualSlide(0)"></div>
-            <div class="nav-btn" onclick="manualSlide(1)"></div>
-        </div>
-    </section>
+            <div class="hero-background" style="background-image: url('img/banner-encomendas.png');"></div> 
+        </section>
 
-    <section class="rockstar-section" data-bg="img/banner-potencialize.png">
-        <div class="rockstar-content banner-content">
-            <h2>Potencialize seu Condomínio</h2>
-            <p>Controle de Encomendas, Manutenção Predial e Notificações Inteligentes.</p>
-        </div>
-    </section>
+        <section class="newswire-grid" id="recursos">
+            <article class="card large">
+                <div class="card-image" style="background-image: url('img/banner-encomendas.png');"></div>
+                <div class="card-content">
+                    <span class="tag">Segurança</span>
+                    <h3>Gestão de Encomendas</h3>
+                    <p style="color: #ccc; margin-top: 10px; font-size: 14px;">Recebimento com foto, notificação automática por e-mail e retirada com assinatura digital.</p>
+                </div>
+            </article>
+            <article class="card">
+                <div class="card-image" style="background-image: url('img/banner-manutencao.png');"></div>
+                <div class="card-content">
+                    <span class="tag">Predial</span>
+                    <h3>Controle de Manutenção</h3>
+                    <p style="color: #ccc; margin-top: 10px; font-size: 14px;">Organize chamados, preventivas e histórico com fotos.</p>
+                </div>
+            </article>
+        </section>
 
-    <section id="guia" class="rockstar-section" data-bg="img/banner-semfundo1.png">
-        <div class="rockstar-content container">
-            <h3 class="section-title">Como configurar e usar</h3>
-            <p class="subtitle">Simples, intuitivo e poderoso. Veja como é fácil começar.</p>
-        </div>
-    </section>
-
-    <section class="rockstar-section" data-bg="img/banner-semfundo2.png">
-        <div class="rockstar-content container">
-            <div class="text-only-wrapper">
-                <div class="feature-text">
-                    <h4>Personalize para seu Condomínio</h4>
-                    <p>O sistema se adapta à sua estrutura física, não o contrário.</p>
-                    <div class="step-list">
-                        <div class="step"><span class="step-num">1</span><p>No menu <b>Configurações</b>, defina se você usa Blocos, Torres, Ruas ou Quadras.</p></div>
-                        <div class="step"><span class="step-num">2</span><p>Insira a quantidade de andares e apartamentos. O sistema gera a lista automaticamente.</p></div>
-                        <div class="step"><span class="step-num">3</span><p>Configure seu <b>E-mail Gmail</b> para enviar as notificações automáticas aos moradores.</p></div>
+        <section class="game-library" id="funcionalidades">
+            <h2>Configuração e Uso</h2>
+            <div class="games-grid">
+                <div class="game-card" style="background-image: url('img/personalização.png');">
+                    <div class="card-overlay">
+                        <h4>Personalização</h4>
+                        <p>Defina Blocos, Torres e Unidades automaticamente.</p>
+                    </div>
+                </div>
+                <div class="game-card" style="background-image: url('img/notificações.png');">
+                    <div class="card-overlay">
+                        <h4>Notificações</h4>
+                        <p>Integração com Gmail para avisos automáticos.</p>
+                    </div>
+                </div>
+                <div class="game-card" style="background-image: url('img/wifi.png');">
+                    <div class="card-overlay">
+                        <h4>Acesso Wi-Fi</h4>
+                        <p>Acesse pelo celular ou tablet sem instalação.</p>
+                    </div>
+                </div>
+                <div class="game-card" style="background-image: url('img/qrcode.png');">
+                    <div class="card-overlay">
+                        <h4>QR Code</h4>
+                        <p>Login rápido para porteiros e zeladores.</p>
+                    </div>
+                </div>
+                <div class="game-card" style="background-image: url('img/relatorios.png');">
+                    <div class="card-overlay">
+                        <h4>Relatórios</h4>
+                        <p>Histórico completo de entradas e saídas.</p>
+                    </div>
+                </div>
+                <div class="game-card" style="background-image: url('img/suporte.png');">
+                    <div class="card-overlay">
+                        <h4>Suporte</h4>
+                        <p>Treinamento completo para sua equipe.</p>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
-
-    <section class="rockstar-section" data-bg="img/banner-encomendas.png">
-        <div class="rockstar-content container">
-            <div class="text-only-wrapper">
-                <div class="feature-text">
-                    <h4>Gestão de Encomendas</h4>
-                    <p>Agilidade na portaria e segurança para o morador.</p>
-                    <div class="step-list">
-                        <div class="step"><span class="step-num">1</span><p><b>Recebimento:</b> Digite a unidade. O sistema busca o morador e você tira uma foto da encomenda.</p></div>
-                        <div class="step"><span class="step-num">2</span><p><b>Notificação:</b> O morador recebe um e-mail na hora com a foto do pacote.</p></div>
-                        <div class="step"><span class="step-num">3</span><p><b>Retirada:</b> Colete a assinatura digital direto na tela ou tablet para dar baixa.</p></div>
-                    </div>
-                </div>
+            <div class="center-btn">
+                <a href="https://rykesistema.loophole.site/" target="_blank" class="btn btn-outline">Testar Agora</a>
             </div>
-        </div>
-    </section>
-
-    <section class="rockstar-section" data-bg="img/banner-manutencao.png">
-        <div class="rockstar-content container">
-            <div class="text-only-wrapper">
-                <div class="feature-text">
-                    <h4>Controle de Manutenção</h4>
-                    <p>Nunca mais esqueça uma lâmpada queimada ou uma revisão preventiva.</p>
-                    <div class="step-list">
-                        <div class="step"><span class="step-num">1</span><p>Crie categorias personalizadas (Jardinagem, Elétrica, Piscina).</p></div>
-                        <div class="step"><span class="step-num">2</span><p>Abra um chamado indicando o local e a urgência. Ele fica visível no calendário.</p></div>
-                        <div class="step"><span class="step-num">3</span><p>Ao finalizar, anexe a foto do serviço pronto e registre quem realizou o reparo.</p></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="rockstar-section" data-bg="img/banner-semfundo3.png">
-        <div class="rockstar-content container">
-            <div class="text-only-wrapper">
-                <div class="feature-text">
-                    <h4>Acesso em Rede e Wi-Fi</h4>
-                    <p>Use em vários computadores ou celulares simultaneamente.</p>
-                    <div class="step-list">
-                        <div class="step"><span class="step-num">1</span><p>Mantenha o sistema aberto no <b>Computador Principal (Servidor)</b>.</p></div>
-                        <div class="step"><span class="step-num">2</span><p>Nos outros dispositivos (Portaria 2, Celular do Zelador), conecte no mesmo Wi-Fi.</p></div>
-                        <div class="step"><span class="step-num">3</span><p>Leia o <b>QR Code</b> na tela inicial ou digite o IP para acessar o sistema completo sem instalar nada.</p></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="rockstar-section" data-bg="img/banner-ajuda.png">
-        <div class="rockstar-content banner-content">
-            <h2>Suporte Especializado</h2>
-            <p>Nossa equipe garante uma implantação tranquila e treinamento completo para sua portaria.</p>
-        </div>
-    </section>
-
-    <section id="orcamento" class="rockstar-section" data-bg="img/banner-suporte.png">
-        <div class="rockstar-content container">
-            <div class="form-wrapper">
-                <h2>Leve essa tecnologia para seu condomínio</h2>
-                <p>Solicite um orçamento personalizado agora mesmo.</p>
-                <form id="formZap">
-                    <div class="form-grid">
-                        <div class="input-box">
-                            <label>Seu Nome</label>
-                            <input type="text" id="nome" placeholder="Nome completo" required>
+        </section>
+        
+        <section class="store-section" id="orcamento">
+            <h2>Leve essa tecnologia</h2>
+            <div class="store-banner" style="background-image: url('img/leve-essa-tecnologia.png');">
+                <div class="store-content form-container-rockstar">
+                    <form id="formZap" class="rockstar-form">
+                        <div class="input-group">
+                            <input type="text" id="nome" placeholder="Seu Nome Completo" required>
                         </div>
-                        <div class="input-box">
-                            <label>Condomínio</label>
-                            <input type="text" id="condominio" placeholder="Nome do condomínio" required>
+                        <div class="input-group">
+                            <input type="text" id="condominio" placeholder="Nome do Condomínio" required>
                         </div>
-                        <div class="input-box full-width">
-                            <label>Empresa (Opcional)</label>
-                            <input type="text" id="empresa" placeholder="Administradora ou Empresa">
+                        <div class="input-group">
+                            <input type="text" id="empresa" placeholder="Empresa (Opcional)">
                         </div>
-                    </div>
-                    <button type="submit" class="btn-submit-big">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/WhatsApp.svg" alt="WhatsApp">
-                        Solicitar Orçamento no WhatsApp
-                    </button>
-                </form>
+                        <button type="submit" class="btn btn-white full-width">
+                            Chamar no WhatsApp
+                        </button>
+                    </form>
+
+                </div>
             </div>
-        </div>
-    </section>
+        </section>
+    </main>
 
     <footer>
-        <p>&copy; 2026 Ryke Sistemas. Todos os direitos reservados.</p>
+        <div class="footer-links">
+            <a href="#orcamento">Contato</a>
+            <a href="#recursos">Sobre</a>
+            <a href="https://rykesistema.loophole.site/">Login</a>
+        </div>
+        <div class="footer-legal">
+            <p>&copy; 2026 Ryke Sistemas. Todos os direitos reservados.</p>
+            <div class="legal-links">
+                <a href="#">Privacidade</a>
+                <a href="#">Termos</a>
+            </div>
+        </div>
     </footer>
 
     <script src="script.js"></script>
