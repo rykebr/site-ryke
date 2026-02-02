@@ -56,14 +56,14 @@ a { text-decoration: none; color: inherit; }
 .nav-left { 
     display: flex; 
     align-items: center; 
-    gap: 15px; /* Valor pequeno para o RYKE não "fugir" do menu */
+    gap: 12px; /* Valor pequeno para o RYKE não "fugir" do menu */
 }
 
 /* 3. O "margin-left: auto" é o que faz a mágica de separar os dois grupos */
 .nav-right { 
     display: flex; 
     align-items: center; 
-    gap: 10px; /* Espaço entre os dois botões */
+    gap: 8px; /* Espaço entre os dois botões */
     margin-left: auto; /* Empurra este grupo todo para a direita */
 }
 
