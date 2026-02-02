@@ -47,8 +47,9 @@ a { text-decoration: none; color: inherit; }
     background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
     position: fixed;
     width: 100%;
-    z-index: 1000;
+	position: fixed;
     top: 0;
+    z-index: 1000;
 }
 
 /* 2. Mantém as 3 faixinhas e o RYKE juntos no canto esquerdo */
