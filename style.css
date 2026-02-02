@@ -56,7 +56,7 @@ a { text-decoration: none; color: inherit; }
 .nav-left { 
     display: flex; 
     align-items: center; 
-    gap: 22px; /* Valor pequeno para o RYKE não "fugir" do menu */
+    gap: 15px; /* Valor pequeno para o RYKE não "fugir" do menu */
 }
 
 /* 3. O "margin-left: auto" é o que faz a mágica de separar os dois grupos */
