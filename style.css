@@ -43,7 +43,7 @@ a { text-decoration: none; color: inherit; }
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 10px;
+	padding: 10px 5px 10px 15px;
     background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
     position: fixed;
     width: 100%;
@@ -59,11 +59,12 @@ a { text-decoration: none; color: inherit; }
     gap: 12px; /* Valor pequeno para o RYKE não "fugir" do menu */
 }
 
-/* 3. Mantém o Download e o Acessar Demo no canto direito */
+/* 3. O "margin-left: auto" é o que faz a mágica de separar os dois grupos */
 .nav-right { 
     display: flex; 
     align-items: center; 
-    gap: 10px; /* Distância entre os dois botões */
+    gap: 10px; /* Espaço entre os dois botões */
+    margin-left: auto; /* Empurra este grupo todo para a direita */
 }
 
 .menu-btn {
