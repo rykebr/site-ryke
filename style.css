@@ -51,19 +51,18 @@ a { text-decoration: none; color: inherit; }
     top: 0;
 }
 
-/* O lado esquerdo ganha flex: 1 para "empurrar" o que está à direita */
+/* 2. Mantém as 3 faixinhas e o RYKE juntos no canto esquerdo */
 .nav-left { 
     display: flex; 
     align-items: center; 
-    gap: 40px; 
-    flex: 8; 
+    gap: 12px; /* Valor pequeno para o RYKE não "fugir" do menu */
 }
 
-/* O lado direito mantém o alinhamento e o espaçamento entre os botões */
+/* 3. Mantém o Download e o Acessar Demo no canto direito */
 .nav-right { 
     display: flex; 
     align-items: center; 
-    gap: 10px; /* Diminuí um pouco o espaço entre Download e Demo */
+    gap: 10px; /* Distância entre os dois botões */
 }
 
 .menu-btn {
