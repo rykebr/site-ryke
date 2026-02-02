@@ -56,7 +56,7 @@ a { text-decoration: none; color: inherit; }
     display: flex; 
     align-items: center; 
     gap: 20px; 
-    flex: 1; 
+    flex: 8; 
 }
 
 /* O lado direito mantém o alinhamento e o espaçamento entre os botões */
