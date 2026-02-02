@@ -55,7 +55,7 @@ a { text-decoration: none; color: inherit; }
 .nav-left { 
     display: flex; 
     align-items: center; 
-    gap: 20px; 
+    gap: 40px; 
     flex: 8; 
 }
 
