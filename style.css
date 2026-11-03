@@ -321,6 +321,9 @@ ul, ol { list-style: none; }
     border-bottom: 1px solid var(--accent); padding-bottom: 3px; color: var(--accent);
 }
 
+.work-game .btn-row { margin-top: 20px; }
+.work-game .work-img { display: block; }
+
 .rail-ui { display: flex; align-items: center; gap: 24px; padding: 22px var(--pad) 0; }
 .rail-bar { flex-grow: 1; height: 1px; background: var(--rule); position: relative; }
 .rail-bar i { position: absolute; left: 0; top: -1px; height: 3px; width: 20%; background: var(--accent); }
