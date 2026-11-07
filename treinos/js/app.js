@@ -209,6 +209,26 @@ function show(v,manter){
 function ir(v){if(location.hash.slice(1)===v)show(v);else location.hash=v;}
 window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h==='editar'&&S)return show('editar');show(ABAS.includes(h)||h==='novo'||h==='inicio'?h:(S?'treino':'inicio'));});
 
+/* ================= Instalar como app ================= */
+let instalarEvt=null;
+const instalado=()=>(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+const ehIOS=()=>/iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();instalarEvt=e;if(atual==='inicio'||atual==='perfil')show(atual,true);});
+window.addEventListener('appinstalled',()=>{instalarEvt=null;LS.set('rt-instalado',1);toast('App instalado! Procure o ícone Treinos na tela inicial.',4500);if(atual==='inicio'||atual==='perfil')show(atual,true);});
+function cartaoInstalar(lugar){
+  if(instalado()||(lugar==='inicio'&&LS.get('rt-instalar-oculto',0)>Date.now()))return '';
+  const ios=ehIOS();
+  return `<div class="instalar" id="instalar"><img src="img/icon-192.png" alt="" width="48" height="48"><div><b>Instale o app</b><small>${ios?'Fica na tela inicial do iPhone, abre em tela cheia e funciona sem internet.':'Ícone na tela inicial, abre em tela cheia, funciona sem internet e tem atalhos para Treino e Coach.'}</small></div>
+    <button class="btn cheio" type="button" data-act="instalar">${ios?'Como instalar':'Instalar'}</button>${lugar==='inicio'?'<button class="x" type="button" data-act="instalarx" aria-label="Agora não">×</button>':''}</div>`;
+}
+async function instalar(){
+  if(instalarEvt){const e=instalarEvt;instalarEvt=null;try{e.prompt();const r=await e.userChoice;if(r&&r.outcome==='accepted')LS.set('rt-instalado',1);}catch(err){}show(atual,true);return;}
+  const ios=ehIOS();
+  abrirDlg(`<h3>Instalar o app</h3>${ios?`<ol class="passosinst"><li>Abra este site no <b>Safari</b>.</li><li>Toque no botão <b>Compartilhar</b> <span class="ic">⬆︎</span> na barra de baixo.</li><li>Role e toque em <b>Adicionar à Tela de Início</b>.</li><li>Confirme em <b>Adicionar</b>. O ícone Treinos aparece junto dos seus apps.</li></ol>`
+  :`<ol class="passosinst"><li>No <b>Chrome</b> ou <b>Edge</b>, toque no menu <span class="ic">⋮</span> no canto da tela.</li><li>Escolha <b>Instalar app</b> ou <b>Adicionar à tela inicial</b>.</li><li>Confirme. O ícone Treinos aparece junto dos seus apps.</li></ol><p class="sub">No computador, também dá para clicar no ícone de instalar na barra de endereço.</p>`}
+  <button class="btn cheio bloco" type="button" data-act="fechar">Entendi</button>`);
+}
+
 /* ================= Tela: início (quem vai treinar) ================= */
 let listaStatus='',capaI=0;
 /* troca a foto e a frase da capa a cada 6 segundos */
@@ -229,6 +249,7 @@ function telaInicio(){
   <div class="sobe">`;
   if(atualC&&!ehHenrique(atualC.nome))h+=`<button class="destaque" type="button" data-act="continuar">${avatar(atualC.nome)}<span><b>Continuar</b><small>Treinos de ${esc(atualC.nome)}</small></span><span class="seta">›</span></button>`;
   h+=`<button class="destaque" type="button" data-act="henrique">${avatar('Henrique')}<span><b>Treinos de Henrique</b><small>Peito, costas, ombros e braços, de segunda a sexta</small></span><span class="seta">›</span></button>`;
+  h+=cartaoInstalar('inicio');
   h+=`<p class="subt">Quem vai treinar?</p><input class="busca" id="busca" type="search" placeholder="Procure seu nome e sobrenome" autocomplete="off" aria-label="Procurar nome">
   <div class="pessoas" id="pessoas">`;
   meus.filter(([id,c])=>!ehHenrique(c.nome)).forEach(([id,c])=>{h+=`<button class="pessoa aqui" type="button" data-act="pessoa" data-id="${esc(id)}" data-nome="${esc(normNome(c.nome))}">${avatar(c.nome)}<span><b>${esc(c.nome)}</b><small>${c.pendente?'Salvo neste aparelho':'Entra direto neste aparelho'}</small></span><span class="seta">›</span></button>`;});
@@ -848,6 +869,7 @@ function telaPerfil(){
   <div class="acoes" style="margin-top:12px"><button class="btn cheio" type="button" data-act="editarperfil">Editar meus dados</button></div></div>
   <div class="card"><h3>Conta e nuvem</h3><p id="syncstatus">${syncTexto()}</p>
    <div class="acoes"><button class="btn" type="button" data-act="syncagora">Sincronizar agora</button>${c.token?'<button class="btn" type="button" data-act="trocasenha">Trocar senha</button>':''}<button class="btn" type="button" data-act="ir" data-v="inicio">Trocar de pessoa</button><button class="btn perigo" type="button" data-act="sair">Sair deste aparelho</button></div></div>
+  ${cartaoInstalar('perfil')}
   <div class="card"><h3>Ajustes</h3><div class="form">
     <label class="campo">Registrar carga (kg)<select data-cfg="carga"><option value="1"${cf.carga?' selected':''}>Sim</option><option value="0"${!cf.carga?' selected':''}>Não, só repetições</option></select></label>
     <label class="campo">Cronômetro do treino<select data-cfg="crono"><option value="1"${cf.crono?' selected':''}>Mostrar</option><option value="0"${!cf.crono?' selected':''}>Esconder</option></select></label>
@@ -1009,6 +1031,8 @@ document.addEventListener('click',e=>{
       abrirDlg(`<h3 class="ok">Plano novo pronto</h3><p><b>${esc(S.plano.tipo)}</b></p><ul class="lista-ia">${S.plano.explic.map(t=>`<li>${esc(t)}</li>`).join('')}</ul><button class="btn cheio bloco" type="button" data-act="fechar">Ver o plano</button>`);ir('plano');break;}
     /* coach */
     case 'sug':perguntar(b.textContent);break;
+    case 'instalar':instalar();break;
+    case 'instalarx':LS.set('rt-instalar-oculto',Date.now()+7*864e5);{const c=$('#instalar');if(c)c.remove();}break;
     case 'painel':painelNumeros();break;
     case 'limparchat':armar(b,()=>{S.ia.chat=[];chatCtx={};save();show('coach');},'Limpar?');break;
     case 'iacmd':{const m=chatMsgs().find(x=>x.id===b.dataset.m),a=m&&m.acoes&&m.acoes[+b.dataset.a];if(!a||m.feito)break;
