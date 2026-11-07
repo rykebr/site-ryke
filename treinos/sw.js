@@ -1,7 +1,9 @@
 // Service worker do Ryke Treinos: busca a versão nova na rede e usa a cópia salva quando estiver sem internet.
-const CACHE = 'ryke-treinos-v1';
-const CORE = ['./', 'index.html', 'estilo.css?v=1', 'fontes.css', 'manifest.webmanifest', 'img/icon-192.png', 'img/icon-512.png',
-  'js/motor.js?v=1', 'js/exercicios.js?v=1', 'js/conhecimento.js?v=1', 'js/ia-pesos.js?v=1', 'js/ia.js?v=1', 'js/nuvem.js?v=1', 'js/app.js?v=1'];
+const CACHE = 'ryke-treinos-v2';
+const V = '?v=2';
+const CORE = ['./', 'index.html', 'estilo.css' + V, 'fontes.css', 'manifest.webmanifest', 'img/icon-192.png', 'img/icon-512.png',
+  'js/motor.js' + V, 'js/exercicios.js' + V, 'js/conhecimento.js' + V, 'js/ia-pesos.js' + V, 'js/ia.js' + V, 'js/cerebro.js' + V, 'js/nuvem.js' + V, 'js/app.js' + V,
+  'img/fundo/fundo1.webp', 'img/fundo/fundo2.webp', 'img/fundo/fundo3.webp', 'img/fundo/fundo4.webp', 'img/fundo/fundo5.webp', 'img/fundo/fundo6.webp'];
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();

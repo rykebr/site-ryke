@@ -299,7 +299,10 @@ const IA=(()=>{
     const kgs=sets.map(s=>+s.kg).filter(x=>x>0),kg=kgs.length?Math.max(...kgs):0;
     if(ex.seg)return bateu?`Bateu ${alvo} s em todas. Hoje tente ${alvo+10} s.`:`Tente chegar a ${alvo} s em todas as séries.`;
     if(ex.bw&&!kg)return bateu?`Bateu ${alvo} em todas. Desça mais devagar ou faça ${alvo+2} por série.`:'Busque mais repetições que da última vez.';
+    if(bateu&&u.sens==='pesado')return carga&&kg?`Bateu ${alvo} em todas, mas achou pesado. Repita ${fmtKg(kg)} kg hoje até ficar firme.`:`Bateu ${alvo} em todas, mas achou pesado. Repita o peso hoje até ficar firme.`;
+    if(bateu&&u.sens==='facil')return carga&&kg?`Bateu ${alvo} em todas e achou fácil. Hoje pode ir para ${fmtKg(kg+2*incremento(kg))} kg.`:`Bateu ${alvo} em todas e achou fácil. Hoje suba o peso com vontade.`;
     if(bateu)return carga&&kg?`Bateu ${alvo} em todas com ${fmtKg(kg)} kg. Hoje tente ${fmtKg(kg+incremento(kg))} kg.`:`Bateu ${alvo} em todas. Hoje suba um pouco o peso.`;
+    if(u.sens==='facil')return carga&&kg?`Da última vez achou fácil. Busque ${alvo} em todas, ou suba para ${fmtKg(kg+incremento(kg))} kg.`:'Da última vez achou fácil. Busque mais repetições ou um pouco mais de peso.';
     if(sets.some(s=>s.r<alvo-2))return carga&&kg?`Ficou abaixo de ${alvo-2} reps. Mantenha ${fmtKg(kg)} kg até firmar, ou baixe um pouco.`:`Ficou abaixo de ${alvo-2} reps. Mantenha o peso até firmar.`;
     return carga&&kg?`Mesmos ${fmtKg(kg)} kg, buscando ${alvo} em todas.`:'Mesmo peso, buscando mais repetições.';
   }
@@ -428,10 +431,17 @@ const IA=(()=>{
     EX_IDS.forEach(id=>{const nt=toks(EXS[id].n.replace(/\(.*?\)/g,''));if(!nt.length)return;
       const hit=nt.filter(w=>qt.has(w)).length,s=hit/nt.length+hit*.1;
       if(hit>=Math.min(2,nt.length)&&(!best||s>best.s))best={id,s};});
-    return best&&best.s>=.6?best.id:null;
+    if(best&&best.s>=.6)return best.id;
+    /* "como fazer agachamento": uma palavra só aponta para a variação mais básica que tem ela no nome */
+    if(/\b(como (fazer|faz|e|funciona)|execucao|tecnica|postura|explica|explicar|o que e)\b/.test(norm(q))){
+      const cand=EX_IDS.filter(id=>{const nt=toks(EXS[id].n.replace(/\(.*?\)/g,''));return nt.some(w=>w.length>=5&&qt.has(w))&&nt[0]&&qt.has(nt[0]);});
+      if(cand.length)return cand.sort((a,b)=>EXS[a].nv-EXS[b].nv||EXS[a].n.length-EXS[b].n.length)[0];
+    }
+    return null;
   }
   function responder(q,S){
     if(!idx)indexar();
+    const cmd=comando(q,S);if(cmd)return cmd;
     const n=norm(q),p=S&&S.perfil||{},cc=S&&S.perfil?calc(p,S.ia&&S.ia.ajKcal):null;
     const tem=re=>re.test(n);
     /* perguntas sobre os próprios números */
@@ -454,5 +464,44 @@ const IA=(()=>{
     return{txt:'Ainda não sei responder isso. Pergunte sobre treino, descanso, alimentação, suplementos, dor, progressão de carga ou sobre um exercício pelo nome.',nada:true};
   }
 
-  return{calc,gerar,analisar,insights,responder,sugestao,fase,prescricao,serve,eqOk,estimaMin,volumePlano,faixa,nomeDia,alvos,OBJ,NIVEL,LOCAL,DIAS,DIAS_C,ORDEM_SEMANA,PADRAO,lista,fmtKg,uidl};
+  /* ---------- IA interativa: comandos no Coach ---------- */
+  const PALAVRA_GRUPO={peito:'peito',peitoral:'peito',costas:'costas',dorsal:'costas',ombro:'ombros',ombros:'ombros',biceps:'biceps',triceps:'triceps',braco:'biceps',bracos:'biceps',trapezio:'trapezio',antebraco:'antebraco',
+    perna:'quadriceps',pernas:'quadriceps',coxa:'quadriceps',quadriceps:'quadriceps',posterior:'posteriores',gluteo:'gluteos',gluteos:'gluteos',bumbum:'gluteos',bunda:'gluteos',panturrilha:'panturrilha',abdomen:'abdomen',abdominal:'abdomen',barriga:'abdomen'};
+  const PALAVRA_LESAO={ombro:'ombro',ombros:'ombro',joelho:'joelho',joelhos:'joelho',lombar:'lombar',costas:'lombar',coluna:'lombar',punho:'punho',pulso:'punho',cotovelo:'cotovelo'};
+  function comando(q,S){
+    const n=norm(q),p=S&&S.perfil;if(!p)return null;
+    const palavras=n.split(' ');
+    const noPlano=id=>Object.values(S.plano.dias||{}).some(d=>d.ex.some(it=>it.id===id));
+    if(/\b(oi|ola|bom dia|boa tarde|boa noite|e ai)\b/.test(n)&&palavras.length<=4)
+      return{txt:`Oi, ${p.nome.split(' ')[0]}! Posso tirar dúvidas e também mexer no seu plano. Experimente: "não gosto de leg press", "tenho só 30 minutos", "quero treinar 4 dias", "quero focar em glúteo" ou "registrar peso 70".`};
+    if(/\b(comecar|começar|bora|iniciar)\b.*\btreino\b|\bbora treinar\b/.test(n))return{txt:'Vamos lá! Toque abaixo para abrir o treino de hoje.',acoes:[{lab:'Abrir o treino',cmd:{tipo:'irtreino'},sim:1}]};
+    if(/\b(como estou|meu progresso|minha evolucao|estou evoluindo|como vou)\b/.test(n)){
+      const h=(S.hist||[]).filter(x=>!x.antes),d30=h.filter(x=>(Date.now()-new Date(x.data+'T12:00:00'))/864e5<=30).length;
+      const prs=h.slice(-10).reduce((a,x)=>a+(x.prs||[]).length,0),c=(S.corpo||[]).filter(x=>+x.peso>0).sort((a,b)=>a.data.localeCompare(b.data));
+      let t=h.length?`Você fez ${h.length} ${h.length===1?'treino':'treinos'} no total, ${d30} nos últimos 30 dias, e bateu ${prs} ${prs===1?'recorde':'recordes'} nos últimos 10.`:'Você ainda não finalizou nenhum treino. O primeiro é o mais importante!';
+      if(c.length>=2)t+=` Seu peso foi de ${fmtKg(c[0].peso)} para ${fmtKg(c[c.length-1].peso)} kg.`;
+      return{txt:t};}
+    const mPeso=String(q).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').match(/\b(peso|pesando|pesei|registrar peso|meu peso e)\D{0,12}(\d{2,3}(?:[.,]\d)?)/);
+    if(mPeso){const v=parseFloat(mPeso[2].replace(',','.'));if(v>=30&&v<=250)return{txt:`Registro ${fmtKg(v)} kg hoje?`,acoes:[{lab:'Registrar',cmd:{tipo:'peso',v},sim:1}]};}
+    const mDor=n.match(/\b(dor|doendo|doi|machuquei|lesao|lesionei|incomoda)\b/);
+    if(mDor){const l=palavras.map(w=>PALAVRA_LESAO[w]).find(Boolean);
+      if(l)return{txt:`Dor ${l==='lombar'?'na lombar':'no '+l} merece cuidado. Se for forte, em pontada ou não passar, procure um médico ou fisioterapeuta. Posso marcar isso no seu perfil e refazer o plano evitando os exercícios que mais forçam ${ART[l]}.`,acoes:(p.lesoes||[]).includes(l)?[]:[{lab:'Marcar e refazer o plano',cmd:{tipo:'lesao',l},sim:1}]};}
+    const mMin=n.match(/\b(\d{2,3})\s*(min|minutos)\b/);
+    if(mMin&&/\b(tenho|so|apenas|treino|tempo|ter)\b/.test(n)){const v=Math.max(20,Math.min(120,+mMin[1]));return{txt:`Hoje seus treinos levam uns ${p.tempo} min. Refaço o plano para caber em ${v} min?`,acoes:[{lab:`Refazer para ${v} min`,cmd:{tipo:'tempo',v},sim:1}]};}
+    if(/\b(mais curto|menos tempo|treino longo|muito longo|demora muito)\b/.test(n)){const v=Math.max(20,(+p.tempo||45)-15);return{txt:`Posso encurtar para uns ${v} min por treino, mantendo os exercícios principais.`,acoes:[{lab:`Refazer para ${v} min`,cmd:{tipo:'tempo',v},sim:1}]};}
+    const mDias=n.match(/\b([1-6]|um|dois|tres|quatro|cinco|seis)\s*(dias|vezes)\b/);
+    if(mDias){const map={um:1,dois:2,tres:3,quatro:4,cinco:5,seis:6};const v=map[mDias[1]]||+mDias[1];
+      return{txt:`Hoje você treina ${(p.dias||[]).length} dias. Monto um plano novo com ${v} ${v===1?'dia':'dias'}? Depois você ajusta quais dias no perfil.`,acoes:[{lab:`Refazer com ${v} dias`,cmd:{tipo:'dias',v},sim:1}]};}
+    if(/\b(focar|foco|priorizar|crescer mais|aumentar|desenvolver|mais volume)\b/.test(n)){const g=palavras.map(w=>PALAVRA_GRUPO[w]).find(Boolean);
+      if(g&&!(p.evitar||[]).includes(g))return{txt:`Dou mais volume para ${GRUPOS[g].n.toLowerCase()} e coloco esse grupo no começo dos treinos?`,acoes:(p.foco||[]).includes(g)?[]:[{lab:`Focar em ${GRUPOS[g].n.toLowerCase()}`,cmd:{tipo:'foco',g},sim:1}]};}
+    if(/\b(nao quero|sem|tirar|parar de treinar)\b/.test(n)){const g=palavras.map(w=>PALAVRA_GRUPO[w]).find(Boolean);const exId=acharExercicio(q);
+      if(g&&!exId)return{txt:`Tiro ${GRUPOS[g].n.toLowerCase()} do seu plano?`,acoes:[{lab:`Tirar ${GRUPOS[g].n.toLowerCase()}`,cmd:{tipo:'evitar',g},sim:1}]};}
+    if(/\b(nao gosto|odeio|trocar|substituir|tirar|ruim|chato|aparelho ocupado|nao tem)\b/.test(n)){const id=acharExercicio(q);
+      if(id){const alt=alternativas(id,e=>serve(e,p)).slice(0,3);
+        return{txt:noPlano(id)?`Sem problema. Posso trocar ${EXS[id].n} por:`:`${EXS[id].n} não está no seu plano. Alternativas parecidas: ${lista(alt.map(x=>EXS[x].n))}.`,ex:id,
+          acoes:noPlano(id)?[...alt.map(x=>({lab:EXS[x].n,cmd:{tipo:'trocar',de:id,para:x}})),{lab:'Só tirar do plano',cmd:{tipo:'remover',id}}]:[]};}}
+    return null;
+  }
+
+  return{calc,gerar,comando,analisar,insights,responder,sugestao,fase,prescricao,serve,eqOk,estimaMin,volumePlano,faixa,nomeDia,alvos,OBJ,NIVEL,LOCAL,DIAS,DIAS_C,ORDEM_SEMANA,PADRAO,lista,fmtKg,uidl};
 })();

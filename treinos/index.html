@@ -13,7 +13,7 @@
 <link rel="icon" type="image/png" href="img/icon-192.png">
 <link rel="apple-touch-icon" href="img/apple-touch-icon.png">
 <link rel="stylesheet" href="fontes.css">
-<link rel="stylesheet" href="estilo.css?v=1">
+<link rel="stylesheet" href="estilo.css?v=2">
 </head>
 <body>
 <header class="appbar" id="appbar">
@@ -27,7 +27,7 @@
 <div class="dock" id="dock">
   <div class="barra" id="barra" hidden role="status" aria-live="polite">
     <div class="in">
-      <div class="t" id="bt">0:00</div>
+      <div class="anel"><svg viewBox="0 0 62 62" aria-hidden="true"><circle class="fundo" cx="31" cy="31" r="27"/><circle class="frente" id="banel" cx="31" cy="31" r="27" stroke-dasharray="169.6" stroke-dashoffset="0"/></svg><div class="t" id="bt">0:00</div></div>
       <div class="lab"><b id="btit">Descanso</b><span id="bsub"></span><div class="linha" id="blinha"><div id="bfill"></div></div></div>
       <button id="bmenos" type="button" aria-label="Menos 15 segundos">−15</button>
       <button id="bplus" type="button" aria-label="Mais 15 segundos">+15</button>
@@ -47,12 +47,13 @@
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <input type="file" id="arquivo" accept="application/json,.json" hidden>
 
-<script src="js/motor.js?v=1"></script>
-<script src="js/exercicios.js?v=1"></script>
-<script src="js/conhecimento.js?v=1"></script>
-<script src="js/ia-pesos.js?v=1"></script>
-<script src="js/ia.js?v=1"></script>
-<script src="js/nuvem.js?v=1"></script>
-<script src="js/app.js?v=1"></script>
+<script src="js/motor.js?v=2"></script>
+<script src="js/exercicios.js?v=2"></script>
+<script src="js/conhecimento.js?v=2"></script>
+<script src="js/ia-pesos.js?v=2"></script>
+<script src="js/ia.js?v=2"></script>
+<script src="js/cerebro.js?v=2"></script>
+<script src="js/nuvem.js?v=2"></script>
+<script src="js/app.js?v=2"></script>
 </body>
 </html>

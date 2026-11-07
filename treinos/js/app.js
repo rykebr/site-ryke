@@ -17,6 +17,21 @@ const iniciais=n=>String(n||'?').trim().split(/\s+/).filter(Boolean).slice(0,2).
 const primeiro=n=>String(n||'').trim().split(/\s+/)[0]||'';
 const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 const DIAS=IA.DIAS,DC=IA.DIAS_C,OS=IA.ORDEM_SEMANA;
+const ICO={alvo:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
+  chama:'<path d="M12 3c.8 3.6 5 5.2 5 10a5 5 0 0 1-10 0c0-2.6 1.6-3.8 2.2-5.4.9 1.4 1.7 2 2.6 2.1-.9-2.8-.4-4.8.2-6.7z"/>',
+  brilho:'<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
+  halter:'<path d="M3 10v4M6 7v10M18 7v10M21 10v4M6 12h12"/>',coracao:'<path d="M12 20s-7.5-4.6-7.5-10.2A4.2 4.2 0 0 1 12 7.2a4.2 4.2 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/>',
+  predio:'<path d="M4 21V9l8-5 8 5v12"/><path d="M9 21v-5h6v5M8 11h2M14 11h2"/>',casa:'<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/>',
+  corpo:'<circle cx="12" cy="4.5" r="2.2"/><path d="M12 7.5v7M6.5 10.5h11M9 21l3-6.5 3 6.5"/>',
+  n1:'<path d="M6 20v-4"/><path d="M12 20v-8" opacity=".3"/><path d="M18 20V6" opacity=".3"/>',n2:'<path d="M6 20v-4M12 20v-8"/><path d="M18 20V6" opacity=".3"/>',n3:'<path d="M6 20v-4M12 20v-8M18 20V6"/>',
+  ia:'<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/>',mao:'<path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V12M11 11V4a1.5 1.5 0 0 1 3 0v7M14 11V5.5a1.5 1.5 0 0 1 3 0V14a6 6 0 0 1-6 6h-.5a6 6 0 0 1-5-2.7L3.5 14a1.5 1.5 0 0 1 2.4-1.8L8 14"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',alerta:'<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17v.5"/>',lampada:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>',
+  enviar:'<path d="M4 12l16-8-6 16-2.5-6.5z"/><path d="M11.5 13.5L20 4"/>',grafico:'<path d="M4 4v16h16"/><path d="M8 15l4-4 3 3 5-6"/>',prato:'<circle cx="12" cy="13" r="7"/><circle cx="12" cy="13" r="3.5"/><path d="M5 3v5M3 3v3a2 2 0 0 0 4 0V3M19 3c-1.5 1-2 3-2 5h2v13"/>'};
+const svg=k=>`<svg class="ico" viewBox="0 0 24 24" aria-hidden="true">${ICO[k]||''}</svg>`;
+const matiz=n=>{let h=0;for(const c of String(n||''))h=(h*31+c.charCodeAt(0))%360;return h;};
+const avatar=n=>`<span class="av" style="--h:${matiz(n)}">${esc(iniciais(n))}</span>`;
+const FOTOS=['fundo4.webp','fundo2.webp','fundo5.webp','fundo3.webp','fundo1.webp','fundo6.webp'];
+const FRASES=['Cada série te deixa mais perto.','Constância vence motivação.','O treino de hoje é o resultado de amanhã.','Comece leve. Mas comece.','Seu único adversário é você de ontem.','Disciplina é lembrar do que você quer.'];
 const fmt=s=>{s=Math.max(0,Math.floor(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return(h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0');};
 
 /* ================= Armazenamento ================= */
@@ -162,7 +177,7 @@ const fmtSets=sets=>sets.map(s=>s.kg>0?`${s.r}×${fk(s.kg)}kg`:`${s.r}`).join(',
 
 /* ================= Navegação ================= */
 const ABAS=['treino','plano','coach','evolucao','perfil'];
-let atual='inicio',diaSel=null,diaPlano=null,segEvo='exercicios';
+let atual='inicio',diaSel=null,diaPlano=null,segEvo='exercicios',ultimaTela='';
 function show(v,manter){
   if(v!=='inicio'&&v!=='novo'&&!S)v='inicio';
   if(S&&!S.perfil&&v!=='inicio'&&v!=='novo'){if(!OB||OB.modo!=='completar')OB=obNovo('completar');v='novo';}
@@ -174,6 +189,8 @@ function show(v,manter){
   $('#sync').hidden=!S||!app;
   document.querySelectorAll('#nav a').forEach(a=>a.setAttribute('aria-current',a.dataset.n===v));
   const m=$('#main');
+  if(v!==ultimaTela){m.classList.remove('entra');void m.offsetWidth;m.classList.add('entra');ultimaTela=v;}else m.classList.remove('entra');
+  document.body.classList.toggle('na-capa',v==='inicio');document.body.classList.toggle('no-chat',v==='coach');
   try{
     if(v==='inicio')m.innerHTML=telaInicio();
     else if(v==='novo')m.innerHTML=telaNovo();
@@ -193,23 +210,32 @@ function ir(v){if(location.hash.slice(1)===v)show(v);else location.hash=v;}
 window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h==='editar'&&S)return show('editar');show(ABAS.includes(h)||h==='novo'||h==='inicio'?h:(S?'treino':'inicio'));});
 
 /* ================= Tela: início (quem vai treinar) ================= */
-let listaStatus='';
+let listaStatus='',capaI=0;
+/* troca a foto e a frase da capa a cada 6 segundos */
+setInterval(()=>{if(atual!=='inicio'||document.hidden)return;capaI++;
+  document.querySelectorAll('.capa .fotos i').forEach((el,i)=>el.classList.toggle('on',i===capaI%FOTOS.length));
+  const f=$('#frase');if(f){f.classList.remove('troca');void f.offsetWidth;f.textContent=FRASES[capaI%FRASES.length];f.classList.add('troca');}},6000);
 const ehHenrique=n=>normNome(n)==='henrique';
 function telaInicio(){
   const meus=Object.entries(contas).filter(([id,c])=>c.token||c.pendente);
   const idsMeus=new Set(meus.map(([id])=>id));
   const outros=listaNuvem.filter(p=>!idsMeus.has(p.id)&&!ehHenrique(p.nome));
   const atualC=S&&contas[contaId];
-  let h=`<section class="hero"><div class="marca">Ryke Sistemas</div><h2>Treinos</h2><p>Seu treino de musculação montado por uma IA que roda no seu celular, com bonecos mostrando cada exercício.</p></section>`;
-  if(atualC&&!ehHenrique(atualC.nome))h+=`<button class="destaque" type="button" data-act="continuar"><span class="av">${esc(iniciais(atualC.nome))}</span><span><b>Continuar</b><small>Treinos de ${esc(atualC.nome)}</small></span><span class="seta">›</span></button>`;
-  h+=`<button class="destaque" type="button" data-act="henrique"><span class="av">H</span><span><b>Treinos de Henrique</b><small>Peito, costas, ombros e braços, de segunda a sexta</small></span><span class="seta">›</span></button>`;
+  let h=`<section class="capa" aria-label="Ryke Treinos"><div class="fotos">${FOTOS.map((f,i)=>`<i class="${i===capaI%FOTOS.length?'on':''}" style="background-image:url(img/fundo/${f})"></i>`).join('')}</div><div class="veu"></div>
+  <div class="capa-in"><div class="logo"><img src="img/icon-192.png" alt="" width="42" height="42"><span class="marca">Ryke Sistemas</span></div>
+  <h2>Treinos</h2><p class="frase" id="frase">${FRASES[capaI%FRASES.length]}</p>
+  <p class="desc">Treino montado por uma IA que roda no seu celular, com coach para treino e alimentação.</p>
+  <div class="selos"><span>${svg('ia')} IA no aparelho</span><span>${svg('halter')} 97 exercícios animados</span><span>${svg('prato')} Cardápios na sua meta</span></div></div></section>
+  <div class="sobe">`;
+  if(atualC&&!ehHenrique(atualC.nome))h+=`<button class="destaque" type="button" data-act="continuar">${avatar(atualC.nome)}<span><b>Continuar</b><small>Treinos de ${esc(atualC.nome)}</small></span><span class="seta">›</span></button>`;
+  h+=`<button class="destaque" type="button" data-act="henrique">${avatar('Henrique')}<span><b>Treinos de Henrique</b><small>Peito, costas, ombros e braços, de segunda a sexta</small></span><span class="seta">›</span></button>`;
   h+=`<p class="subt">Quem vai treinar?</p><input class="busca" id="busca" type="search" placeholder="Procure seu nome e sobrenome" autocomplete="off" aria-label="Procurar nome">
   <div class="pessoas" id="pessoas">`;
-  meus.filter(([id,c])=>!ehHenrique(c.nome)).forEach(([id,c])=>{h+=`<button class="pessoa aqui" type="button" data-act="pessoa" data-id="${esc(id)}" data-nome="${esc(normNome(c.nome))}"><span class="av">${esc(iniciais(c.nome))}</span><span><b>${esc(c.nome)}</b><small>${c.pendente?'Salvo neste aparelho':'Entra direto neste aparelho'}</small></span><span class="seta">›</span></button>`;});
-  outros.forEach(p=>{h+=`<button class="pessoa" type="button" data-act="pessoa" data-id="${esc(p.id)}" data-nome="${esc(normNome(p.nome))}"><span class="av">${esc(iniciais(p.nome))}</span><span><b>${esc(p.nome)}</b><small>Toque para entrar com sua senha</small></span><span class="seta">›</span></button>`;});
+  meus.filter(([id,c])=>!ehHenrique(c.nome)).forEach(([id,c])=>{h+=`<button class="pessoa aqui" type="button" data-act="pessoa" data-id="${esc(id)}" data-nome="${esc(normNome(c.nome))}">${avatar(c.nome)}<span><b>${esc(c.nome)}</b><small>${c.pendente?'Salvo neste aparelho':'Entra direto neste aparelho'}</small></span><span class="seta">›</span></button>`;});
+  outros.forEach(p=>{h+=`<button class="pessoa" type="button" data-act="pessoa" data-id="${esc(p.id)}" data-nome="${esc(normNome(p.nome))}">${avatar(p.nome)}<span><b>${esc(p.nome)}</b><small>Toque para entrar com sua senha</small></span><span class="seta">›</span></button>`;});
   h+=`</div><p class="vazio" id="nenhum" ${meus.length||outros.length?'hidden':''}>${listaStatus==='carregando'?'Buscando os nomes…':'Nenhum nome encontrado. Crie sua conta abaixo.'}</p>
   <button class="btn cheio grande" type="button" data-act="novo" style="margin-top:8px">Criar minha conta</button>
-  <p class="rodape">${listaStatus==='offline'?'Sem internet: mostrando os nomes salvos neste aparelho.<br>':''}A IA funciona sem internet depois do primeiro acesso.</p>`;
+  <p class="rodape">${listaStatus==='offline'?'Sem internet: mostrando os nomes salvos neste aparelho.<br>':''}A IA funciona sem internet depois do primeiro acesso.<br>Fotos: Unsplash.</p></div>`;
   return h;
 }
 async function atualizarLista(){
@@ -227,7 +253,7 @@ function filtraPessoas(q){
 function abrirConta(id){
   const c=contas[id];if(!c)return false;
   const dados=normal(LS.get(kDados(id),null));if(!dados)return false;
-  contaId=id;S=dados;LS.set(K_ATUAL,id);aplicaTema();diaSel=null;diaPlano=null;chatMsgs=[];
+  contaId=id;S=dados;LS.set(K_ATUAL,id);aplicaTema();diaSel=null;diaPlano=null;chatCtx={};
   setSync(sujo()?'pend':'');
   if(location.hash.slice(1)==='treino')show('treino');else location.hash='treino';
   puxarNuvem();if(S.sessao)wake();
@@ -314,7 +340,8 @@ let OB=null;
 function obNovo(modo='novo'){
   return{passo:0,modo,erro:'',d:{nome:'',senha:'',sexo:'',idade:'',altura:'',peso:'',objetivo:'',nivel:'',parado:false,dias:[1,3,5],tempo:45,local:'academia',barra:false,foco:[],somente:false,evitar:[],lesoes:[],montar:'ia'}};
 }
-const OPC=(k,v,tit,sub,on)=>`<button class="opcao" type="button" data-act="ob" data-k="${k}" data-v="${v}" aria-pressed="${!!on}"><b>${tit}</b>${sub?`<small>${sub}</small>`:''}</button>`;
+const ICO_OPC={objetivo:{massa:'halter',emagrecer:'chama',definir:'brilho',forca:'alvo',saude:'coracao'},nivel:{ini:'n1',inter:'n2',avan:'n3'},local:{academia:'predio',casa_halteres:'casa',casa_corpo:'corpo'},montar:{ia:'ia',manual:'mao'}};
+const OPC=(k,v,tit,sub,on)=>{const ic=ICO_OPC[k]&&ICO_OPC[k][v];return `<button class="opcao" type="button" data-act="ob" data-k="${k}" data-v="${v}" aria-pressed="${!!on}">${ic?`<span class="oico">${svg(ic)}</span>`:''}<b>${tit}</b>${sub?`<small>${sub}</small>`:''}</button>`;};
 const CHX=(k,v,tit,on,cls='')=>`<button class="chipx ${cls}" type="button" data-act="obl" data-k="${k}" data-v="${v}" aria-pressed="${!!on}">${tit}</button>`;
 const PASSOS=[
   {id:'nome',r:d=>`<h2 class="pergunta">Como você se chama?</h2><p class="sub">Use nome e sobrenome. É assim que você vai se achar na tela inicial.</p>
@@ -404,7 +431,8 @@ function posCriacao(){
 /* ================= Tela: treino ================= */
 function statusCard(){
   const w=semana(),f=IA.fase(w,S.perfil);
-  return `<div class="status"><b>Semana ${Math.min(w,8)} de 8, ${f.nome.toLowerCase()}</b><p>${f.txt}</p></div>`;
+  const sw=Math.min(w,8);
+  return `<div class="status"><div class="anelsem" style="--p:${Math.round(sw/8*100)}%"><span>${sw}<small>DE 8</small></span></div><div><b>Semana ${sw}, ${f.nome.toLowerCase()}</b><p>${f.txt}</p></div></div>`;
 }
 function seletor(sel,act='dia',todos=false){
   const hoje=new Date().getDay(),dias=todos?OS:diasPlano();
@@ -473,7 +501,7 @@ function telaPlayer(){
       <button class="chk" type="button" data-act="chk" data-i="${i}" aria-pressed="${!!s.ok}" aria-label="${s.ok?'Desfazer':'Concluir'} série ${i+1}">${s.skip?'Pulada':CHECK}</button></div>`;});
   h+=`</div>`;
   const tudo=proximoComPendente(x)==null&&completo;
-  if(!completo)h+=`<button class="btn cheio grande concluir" type="button" data-act="concluir">Concluir série ${a+1}</button>`;
+  if(!completo)h+=`<button class="btn laranja grande concluir" type="button" data-act="concluir">Concluir série ${a+1}</button>`;
   else if(!tudo)h+=`<button class="btn ok grande concluir" type="button" data-act="avancar">Próximo exercício ›</button>`;
   else h+=`<button class="btn ok grande concluir" type="button" data-act="finalizar">Finalizar o treino</button>`;
   h+=`<div class="exacoes">
@@ -622,9 +650,9 @@ function bibliotecaLista(){
 }
 function atualizaLib(){const l=$('#liblista');if(l){l.innerHTML=bibliotecaLista();observar();}}
 
-/* ================= Tela: Coach IA ================= */
-let chatMsgs=[];
-const SUGS=['Quantas calorias devo comer?','Quanto de proteína preciso?','Qual meu treino de hoje?','Como fazer o agachamento goblet?','Creatina funciona?','Quanto descansar entre séries?','Como perder barriga?','Em quanto tempo vejo resultado?'];
+/* ================= Tela: Coach IA (chat) ================= */
+let chatCtx={};
+const SUGS_INI=['Monte meu cardápio de hoje','O que comer antes do treino?','Quanta proteína tem 3 ovos?','Creatina funciona?','Como fazer o agachamento?','Quero treinar 4 dias'];
 function volumeFeito(){
   const ini=inicioSemana(new Date()),v={};GRUPO_IDS.forEach(g=>v[g]=0);
   const conta=(id,n)=>{const e=EXS[id];if(!e)return;const vis=new Set();e.p.forEach(m=>{const g=MUSC_GRUPO[m];if(!vis.has(g)){v[g]+=n;vis.add(g);}});e.sec.forEach(m=>{const g=MUSC_GRUPO[m];if(!vis.has(g)){v[g]+=n/2;vis.add(g);}});};
@@ -632,37 +660,81 @@ function volumeFeito(){
   if(S.sessao)S.sessao.itens.forEach(it=>conta(it.id,it.sets.filter(s=>s.ok).length));
   return v;
 }
+const chatMsgs=()=>(S.ia.chat=S.ia.chat||[]);
 function telaCoach(){
-  const p=S.perfil,c=IA.calc(p,S.ia.ajKcal),ins=IA.insights(S),vol=volumeFeito(),gs=IA.alvos(p);
-  let h=`<h2 class="tit">Coach IA</h2><p class="sub">Inteligência que roda no seu aparelho. Analisa seu perfil, seu plano e cada treino, sem internet.</p>
-  <div class="card"><h3>Seus números</h3><div class="nums quatro"><div><b>${fint(c.kcal)}</b><span>kcal por dia</span></div><div><b>${c.prot} g</b><span>proteína</span></div><div><b>${c.carb} g</b><span>carboidrato</span></div><div><b>${c.gord} g</b><span>gordura</span></div></div>
-  <p>Água: <b>${String(c.agua).replace('.',',')} L</b> por dia. IMC <b>${fk(c.imc)}</b>, ${c.imcTxt}. Gasto estimado de ${fint(c.gasto)} kcal.</p>
-  <p>Ritmo esperado: ${c.ritmo}.${S.ia.ajKcal?` A IA já ajustou a meta em ${S.ia.ajKcal>0?'+':''}${S.ia.ajKcal} kcal pelo seu progresso. <button class="linkbtn" type="button" data-act="zerakcal">Desfazer</button>`:''}</p></div>
-  ${statusCard()}`;
-  ins.forEach((x,i)=>{h+=`<div class="card insight ${x.t}"><h3>${esc(x.tit)}</h3><p>${esc(x.txt)}</p>${x.acao?`<button class="btn" type="button" data-act="iaacao" data-i="${i}">${esc(x.acao.lab)}</button>`:''}</div>`;});
-  h+=`<div class="card"><h3>Séries feitas nesta semana</h3><p class="sub">A linha tracejada é o mínimo para evoluir no seu nível.</p><div class="barras">${gs.map(g=>{const fx=IA.faixa(g,p),n=vol[g],mx=fx.max*1.2;return `<div class="barra-l"><span>${GRUPOS[g].n}</span><div class="tr2"><i class="${n>=fx.min?'bom':''}" style="width:${Math.min(100,n/mx*100)}%"></i><em style="left:${fx.min/mx*100}%"></em></div><b>${fk(n)}</b></div>`;}).join('')}</div></div>`;
-  h+=`<div class="card"><h3>Pergunte ao Coach</h3><p class="sub">Treino, alimentação, suplementos, dores, ou um exercício pelo nome.</p>
-  <div class="chat" id="chat">${chatMsgs.length?chatMsgs.map(msgHTML).join(''):`<div class="msg ia">Oi, ${esc(primeiro(p.nome))}! Sou o Coach. Pergunte o que quiser sobre o seu treino.</div>`}</div>
-  <form class="perg" id="fperg"><input id="pergunta" placeholder="Escreva sua pergunta" autocomplete="off" enterkeyhint="send"><button class="btn cheio" type="submit">Enviar</button></form>
-  <div class="sugs">${SUGS.map(s=>`<button type="button" data-act="sug">${esc(s)}</button>`).join('')}</div></div>`;
-  return h;
+  const p=S.perfil,msgs=chatMsgs();
+  const boas={ia:1,t:`Oi, ${primeiro(p.nome)}! Sou o seu Coach IA. Posso montar cardápios com as suas metas, dizer quanto de proteína e calorias tem cada alimento, explicar exercícios e ajustar o seu plano. Pergunte o que quiser.`,sugs:SUGS_INI};
+  return `<div class="chatwrap"><div class="chat-top"><span class="bot">${svg('ia')}</span><div><b>Coach IA</b><small>${navigator.onLine?'Roda no seu aparelho':'Sem internet, funcionando normal'}</small></div>
+    <button class="mini" type="button" data-act="painel">${svg('grafico')} Seus números</button>${msgs.length?`<button class="mini" type="button" data-act="limparchat" aria-label="Limpar conversa">Limpar</button>`:''}</div>
+  <div class="chat" id="chat" aria-live="polite">${[boas,...msgs].map((m,i,arr)=>msgHTML(m,i===arr.length-1)).join('')}</div>
+  <form class="perg" id="fperg"><input id="pergunta" placeholder="Pergunte sobre treino ou alimentação" autocomplete="off" enterkeyhint="send" maxlength="300"><button class="btn cheio" type="submit" aria-label="Enviar">${svg('enviar')}</button></form></div>`;
 }
-function msgHTML(m){
+const quebra=t=>esc(t).replace(/\n/g,'<br>');
+function refeicaoHTML(r){
+  return `<div class="refeicao"><div class="ref-top"><b>${esc(r.nome)}</b><span>${fint(r.tot.k)} kcal · ${fk(r.tot.p)} g proteína</span></div><ul>${r.itens.map(i=>`<li><span>${esc(i.n)}</span><em>${esc(i.med)}</em></li>`).join('')}</ul></div>`;
+}
+function msgHTML(m,ultima){
   if(m.eu)return `<div class="msg eu">${esc(m.t)}</div>`;
-  return `<div class="msg ia">${esc(m.t)}${m.ex&&EXS[m.ex]?`<div class="ex"><div class="art">${poseSVG(m.ex)}</div><div>${mapSVG(EXS[m.ex].p,EXS[m.ex].sec)}</div></div>`:''}${m.rel?`<div class="sugs"><button type="button" data-act="sug">${esc(m.rel)}</button></div>`:''}</div>`;
+  let h=`<div class="msg ia"><p>${quebra(m.t)}</p>`;
+  if(m.refeicoes)h+=m.refeicoes.map(refeicaoHTML).join('');
+  if(m.tabela)h+=`<div class="refeicao"><ul>${m.tabela.linhas.map(l=>`<li><span>${esc(l.med)} ${esc(l.n.toLowerCase())}</span><em>${fint(l.k)} kcal · ${fk(l.p)} g</em></li>`).join('')}</ul></div>`;
+  if(m.ex&&EXS[m.ex])h+=`<div class="ex"><div class="art">${poseSVG(m.ex)}</div><div>${mapSVG(EXS[m.ex].p,EXS[m.ex].sec)}</div></div>`;
+  if(m.acoes&&m.acoes.length)h+=`<div class="respostas">${m.acoes.map((a,j)=>`<button type="button" class="${a.sim?'sim':''}" data-act="iacmd" data-m="${m.id||''}" data-a="${j}"${m.feito?' disabled':''}>${esc(a.lab)}</button>`).join('')}</div>`;
+  const sugs=ultima&&(m.sugs||(m.rel?[m.rel]:null));
+  if(sugs&&sugs.length)h+=`<div class="sugs">${sugs.map(x=>`<button type="button" data-act="sug">${esc(x)}</button>`).join('')}</div>`;
+  return h+'</div>';
 }
+function desenhaChat(digitando){
+  const ch=$('#chat');if(!ch)return;
+  const p=S.perfil,msgs=chatMsgs(),boas={ia:1,t:`Oi, ${primeiro(p.nome)}! Sou o seu Coach IA. Posso montar cardápios com as suas metas, dizer quanto de proteína e calorias tem cada alimento, explicar exercícios e ajustar o seu plano. Pergunte o que quiser.`,sugs:SUGS_INI};
+  ch.innerHTML=[boas,...msgs].map((m,i,arr)=>msgHTML(m,!digitando&&i===arr.length-1)).join('')+(digitando?'<div class="msg ia digitando" aria-label="Coach digitando"><i></i><i></i><i></i></div>':'');
+  observar();ch.scrollTop=ch.scrollHeight;
+}
+let respondendo=false;
 function perguntar(q){
-  q=String(q||'').trim();if(!q)return;
-  const r=IA.responder(q,S);chatMsgs.push({eu:true,t:q},{t:r.txt,ex:r.ex,rel:r.rel});if(chatMsgs.length>40)chatMsgs=chatMsgs.slice(-40);
-  const ch=$('#chat');if(ch){ch.innerHTML=chatMsgs.map(msgHTML).join('');observar();ch.scrollTop=ch.scrollHeight;}
+  q=String(q||'').trim();if(!q||respondendo)return;
+  const msgs=chatMsgs();msgs.push({eu:true,t:q});
   const i=$('#pergunta');if(i)i.value='';
+  respondendo=true;desenhaChat(true);
+  setTimeout(()=>{
+    let r;try{r=Cerebro.responder(q,S,chatCtx)||{txt:'Não entendi.'};}catch(e){console.error(e);r={txt:'Tive um problema para responder isso. Tente de outro jeito.'};}
+    msgs.push({id:uid(),t:r.txt,refeicoes:r.refeicoes,tabela:r.tabela,ex:r.ex,acoes:r.acoes,sugs:r.sugs,rel:r.rel});
+    if(msgs.length>60)msgs.splice(0,msgs.length-60);
+    respondendo=false;save();desenhaChat(false);
+  },Math.min(900,300+q.length*6));
+}
+function regerarPlano(msg){S.plano=IA.gerar(S.perfil,S.ia.pref);diaPlano=null;diaSel=null;return msg+` Plano novo: ${S.plano.tipo.toLowerCase()}. Veja em Plano.`;}
+function executarCmd(c){
+  const p=S.perfil;let txt='Feito.';
+  if(c.tipo==='trocar'){Object.values(S.plano.dias).forEach(D=>D.ex.forEach(it=>{if(it.id===c.de){it.id=c.para;const ob=IA.prescricao(c.para,p).obs;if(ob)it.obs=ob;else delete it.obs;}}));pref(c.de,-1);pref(c.para,1);marcarEditado();txt=`Feito: ${EXS[c.para].n} entrou no lugar de ${EXS[c.de].n} em todos os treinos.`;}
+  else if(c.tipo==='remover'){Object.values(S.plano.dias).forEach(D=>{D.ex=D.ex.filter(it=>it.id!==c.id);});pref(c.id,-1);marcarEditado();txt=`Tirei ${EXS[c.id].n} do seu plano.`;}
+  else if(c.tipo==='tempo'){p.tempo=c.v;txt=regerarPlano(`Pronto, treinos de uns ${c.v} min.`);}
+  else if(c.tipo==='dias'){const MOD={1:[1],2:[1,4],3:[1,3,5],4:[1,2,4,5],5:[1,2,3,4,5],6:[1,2,3,4,5,6]};const atual=p.dias||[];
+    let novo=atual.length>=c.v?Array.from({length:c.v},(_,i)=>atual[Math.round(i*atual.length/c.v)]):MOD[c.v];p.dias=[...new Set(novo)].sort((a,b)=>OS.indexOf(a)-OS.indexOf(b));
+    txt=regerarPlano(`Pronto, ${p.dias.length} dias: ${p.dias.map(d=>DC[d]).join(', ')}. Dá para trocar os dias em Perfil.`);}
+  else if(c.tipo==='foco'){p.foco=[...new Set([...(p.foco||[]),c.g])];p.evitar=(p.evitar||[]).filter(g=>g!==c.g);txt=regerarPlano(`Foco em ${GRUPOS[c.g].n.toLowerCase()} adicionado.`);}
+  else if(c.tipo==='evitar'){p.evitar=[...new Set([...(p.evitar||[]),c.g])];p.foco=(p.foco||[]).filter(g=>g!==c.g);txt=regerarPlano(`Tirei ${GRUPOS[c.g].n.toLowerCase()} do seu treino.`);}
+  else if(c.tipo==='lesao'){p.lesoes=[...new Set([...(p.lesoes||[]),c.l])];txt=regerarPlano('Anotei no seu perfil.');}
+  else if(c.tipo==='tirarlesao'){p.lesoes=(p.lesoes||[]).filter(l=>l!==c.l);txt=regerarPlano('Restrição retirada.');}
+  else if(c.tipo==='peso'){const d=hojeISO(),i=S.corpo.findIndex(x=>x.data===d);if(i>=0)S.corpo[i].peso=c.v;else S.corpo.push({data:d,peso:c.v});S.apagados=S.apagados.filter(x=>x!=='c:'+d);p.peso=c.v;txt=`Peso de ${fk(c.v)} kg registrado hoje. Acompanhe em Evolução, Corpo.`;}
+  else if(c.tipo==='irtreino'){ir('treino');return null;}
+  return txt;
+}
+function painelNumeros(){
+  const p=S.perfil,c=IA.calc(p,S.ia.ajKcal),ins=IA.insights(S),vol=volumeFeito(),gs=IA.alvos(p);
+  abrirDlg(`<h3>Seus números</h3><div class="nums quatro"><div><b>${fint(c.kcal)}</b><span>kcal por dia</span></div><div><b>${c.prot} g</b><span>proteína</span></div><div><b>${c.carb} g</b><span>carboidrato</span></div><div><b>${c.gord} g</b><span>gordura</span></div></div>
+  <p>Água: <b>${String(c.agua).replace('.',',')} L</b> por dia. IMC <b>${fk(c.imc)}</b>, ${c.imcTxt}. Gasto estimado de ${fint(c.gasto)} kcal. Ritmo esperado: ${c.ritmo}.${S.ia.ajKcal?` Meta ajustada pela IA em ${S.ia.ajKcal>0?'+':''}${S.ia.ajKcal} kcal. <button class="linkbtn" type="button" data-act="zerakcal">Desfazer</button>`:''}</p>
+  ${statusCard()}
+  ${ins.map((x,i)=>`<div class="card insight ${x.t}"><span class="iico">${svg(x.t==='ok'?'check':x.t==='alerta'?'alerta':'lampada')}</span><h3>${esc(x.tit)}</h3><p>${esc(x.txt)}</p>${x.acao?`<button class="btn" type="button" data-act="iaacao" data-i="${i}">${esc(x.acao.lab)}</button>`:''}</div>`).join('')}
+  <div class="card"><h3>Séries feitas nesta semana</h3><p class="sub">A linha tracejada é o mínimo para evoluir no seu nível.</p><div class="barras">${gs.map(g=>{const fx=IA.faixa(g,p),n=vol[g],mx=fx.max*1.2;return `<div class="barra-l"><span>${GRUPOS[g].n}</span><div class="tr2"><i class="${n>=fx.min?'bom':''}" style="width:${Math.min(100,n/mx*100)}%"></i><em style="left:${fx.min/mx*100}%"></em></div><b>${fk(n)}</b></div>`;}).join('')}</div></div>
+  <button class="btn cheio bloco" type="button" data-act="fechar">Fechar</button>`,'grande');
 }
 function acaoIA(a){
   if(!a)return;
-  if(a.act==='ia-kcal'){S.ia.ajKcal=(S.ia.ajKcal||0)+a.v;save();toast(`Meta de calorias ajustada em ${a.v>0?'+':''}${a.v} kcal.`);show('coach',true);}
-  else if(a.act==='ia-trocar'){let n=0;Object.values(S.plano.dias).forEach(D=>D.ex.forEach(it=>{if(it.id===a.de){it.id=a.para;n++;}}));pref(a.de,-1);pref(a.para,1);delete S.ia.pulos[a.de];save();toast(`${EXS[a.para].n} entrou no lugar de ${EXS[a.de].n}.`);show('coach',true);}
-  else if(a.act==='ia-menosdias'){const ds=S.perfil.dias,n=Math.max(1,Math.min(a.v,ds.length)),novo=[];for(let i=0;i<n;i++)novo.push(ds[Math.round(i*ds.length/n)]);S.perfil.dias=[...new Set(novo)];S.plano=IA.gerar(S.perfil,S.ia.pref);save();toast(`Plano refeito com ${S.perfil.dias.length} dias.`);show('coach',true);}
-  else if(a.act==='ia-recalibrar'){if(S.perfil.nivel==='ini')S.perfil.nivel='inter';S.inicio=hojeISO();S.plano=IA.gerar(S.perfil,S.ia.pref);save();toast('Plano novo montado. Novo ciclo de 8 semanas começando hoje.');show('coach',true);}
+  if(a.act==='ia-kcal'){S.ia.ajKcal=(S.ia.ajKcal||0)+a.v;save();toast(`Meta de calorias ajustada em ${a.v>0?'+':''}${a.v} kcal.`);fecharDlg();show('coach',true);}
+  else if(a.act==='ia-trocar'){let n=0;Object.values(S.plano.dias).forEach(D=>D.ex.forEach(it=>{if(it.id===a.de){it.id=a.para;n++;}}));pref(a.de,-1);pref(a.para,1);delete S.ia.pulos[a.de];save();toast(`${EXS[a.para].n} entrou no lugar de ${EXS[a.de].n}.`);fecharDlg();show('coach',true);}
+  else if(a.act==='ia-menosdias'){const ds=S.perfil.dias,n=Math.max(1,Math.min(a.v,ds.length)),novo=[];for(let i=0;i<n;i++)novo.push(ds[Math.round(i*ds.length/n)]);S.perfil.dias=[...new Set(novo)];S.plano=IA.gerar(S.perfil,S.ia.pref);save();toast(`Plano refeito com ${S.perfil.dias.length} dias.`);fecharDlg();show('coach',true);}
+  else if(a.act==='ia-recalibrar'){if(S.perfil.nivel==='ini')S.perfil.nivel='inter';S.inicio=hojeISO();S.plano=IA.gerar(S.perfil,S.ia.pref);save();toast('Plano novo montado. Novo ciclo de 8 semanas começando hoje.');fecharDlg();show('coach',true);}
 }
 
 /* ================= Tela: evolução ================= */
@@ -764,7 +836,7 @@ function telaPerfil(){
   const p=S.perfil,c=contas[contaId]||{},cf=S.cfg;
   const L=a=>a&&a.length?a.map(g=>GRUPOS[g]?GRUPOS[g].n:LESOES[g]).join(', '):'nenhum';
   return `<h2 class="tit">Perfil</h2>
-  <div class="card"><div class="acoes" style="gap:12px"><span class="av">${esc(iniciais(c.nome||p.nome))}</span><div><h3 style="margin:0">${esc(c.nome||p.nome)}</h3><span class="sub">${p.idade?p.idade+' anos, ':''}${p.altura} cm, ${fk(p.peso)} kg</span></div></div>
+  <div class="card"><div class="acoes" style="gap:12px">${avatar(c.nome||p.nome)}<div><h3 style="margin:0">${esc(c.nome||p.nome)}</h3><span class="sub">${p.idade?p.idade+' anos, ':''}${p.altura} cm, ${fk(p.peso)} kg</span></div></div>
   <table class="tabelinha" style="margin-top:10px"><tbody>
    <tr><th>Objetivo</th><td>${esc(IA.OBJ[p.objetivo]?IA.OBJ[p.objetivo].n:'')}</td></tr>
    <tr><th>Nível</th><td>${esc(IA.NIVEL[p.nivel]||'')}${p.parado?', voltando de pausa':''}</td></tr>
@@ -846,12 +918,14 @@ function atualizaBarra(){
       bt.textContent=fmt(left);btit.textContent='Descanso';
       bsub.textContent=nx?`Depois: ${EXS[ses.itens[nx.x].id].n}, série ${nx.i+1}`:'Era a última série';
       bfill.style.transform=`scaleX(${Math.min(1,left/ses.restTotal)})`;
+      const an=$('#banel');if(an)an.style.strokeDashoffset=(169.6*(1-Math.min(1,left/ses.restTotal))).toFixed(1);
       return;
     }
     aviso();flashAte=agora+2500;fimDescanso();
   }
   if(ses&&agora<flashAte){
     barra.hidden=false;barra.classList.add('alerta');[bplus,bmenos,bacao,blinha].forEach(b=>b.hidden=true);
+    const an=$('#banel');if(an)an.style.strokeDashoffset='0';
     bt.textContent='0:00';btit.textContent='Bora, próxima série';bsub.textContent='A série em laranja está esperando você';
     return;
   }
@@ -935,8 +1009,12 @@ document.addEventListener('click',e=>{
       abrirDlg(`<h3 class="ok">Plano novo pronto</h3><p><b>${esc(S.plano.tipo)}</b></p><ul class="lista-ia">${S.plano.explic.map(t=>`<li>${esc(t)}</li>`).join('')}</ul><button class="btn cheio bloco" type="button" data-act="fechar">Ver o plano</button>`);ir('plano');break;}
     /* coach */
     case 'sug':perguntar(b.textContent);break;
+    case 'painel':painelNumeros();break;
+    case 'limparchat':armar(b,()=>{S.ia.chat=[];chatCtx={};save();show('coach');},'Limpar?');break;
+    case 'iacmd':{const m=chatMsgs().find(x=>x.id===b.dataset.m),a=m&&m.acoes&&m.acoes[+b.dataset.a];if(!a||m.feito)break;
+      m.feito=true;const t=executarCmd(a.cmd);if(t){chatMsgs().push({id:uid(),t});}save();if(t)desenhaChat(false);break;}
     case 'iaacao':{const x=IA.insights(S)[+b.dataset.i];if(x)acaoIA(x.acao);break;}
-    case 'zerakcal':S.ia.ajKcal=0;save();show('coach',true);break;
+    case 'zerakcal':S.ia.ajKcal=0;save();fecharDlg();painelNumeros();break;
     /* evolução */
     case 'segevo':segEvo=b.dataset.k;show('evolucao',true);break;
     case 'met':progMet=b.dataset.k;show('evolucao',true);break;
