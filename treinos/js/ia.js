@@ -426,10 +426,10 @@ const IA=(()=>{
     const df={};idx.forEach(e=>e.t.forEach(w=>df[w]=(df[w]||0)+1));
     idx.forEach(e=>e.idf=w=>Math.log(1+idx.length/(df[w]||1)));
   }
-  function acharExercicio(q){
-    const qt=new Set(toks(q));let best=null;
+  function acharExercicio(q,p){
+    const qt=new Set(toks(q));let best=null;const semPeso=p&&p.local==='academia'&&!qt.has('corpo');
     EX_IDS.forEach(id=>{const nt=toks(EXS[id].n.replace(/\(.*?\)/g,''));if(!nt.length)return;
-      const hit=nt.filter(w=>qt.has(w)).length,s=hit/nt.length+hit*.1;
+      const hit=nt.filter(w=>qt.has(w)).length,s=hit/nt.length+hit*.1-(semPeso&&/\(peso do corpo\)/.test(EXS[id].n)?.4:0);
       if(hit>=Math.min(2,nt.length)&&(!best||s>best.s))best={id,s};});
     if(best&&best.s>=.6)return best.id;
     /* "como fazer agachamento": uma palavra só aponta para a variação mais básica que tem ela no nome */
@@ -468,13 +468,36 @@ const IA=(()=>{
   const PALAVRA_GRUPO={peito:'peito',peitoral:'peito',costas:'costas',dorsal:'costas',ombro:'ombros',ombros:'ombros',biceps:'biceps',triceps:'triceps',braco:'biceps',bracos:'biceps',trapezio:'trapezio',antebraco:'antebraco',
     perna:'quadriceps',pernas:'quadriceps',coxa:'quadriceps',quadriceps:'quadriceps',posterior:'posteriores',gluteo:'gluteos',gluteos:'gluteos',bumbum:'gluteos',bunda:'gluteos',panturrilha:'panturrilha',abdomen:'abdomen',abdominal:'abdomen',barriga:'abdomen'};
   const PALAVRA_LESAO={ombro:'ombro',ombros:'ombro',joelho:'joelho',joelhos:'joelho',lombar:'lombar',costas:'lombar',coluna:'lombar',punho:'punho',pulso:'punho',cotovelo:'cotovelo'};
+  /* palavras para dias da semana e grupos citados num pedido */
+  const DIA_PAL={domingo:0,dom:0,segunda:1,seg:1,terca:2,quarta:3,qua:3,quinta:4,qui:4,sexta:5,sex:5,sabado:6,sab:6};
+  const PERNAS=['quadriceps','posteriores','gluteos','panturrilha'],CIMA=['peito','costas','ombros','biceps','triceps'];
+  const GRUPO_DIA={...PALAVRA_GRUPO,posteriores:'posteriores',braco:['biceps','triceps'],bracos:['biceps','triceps'],perna:PERNAS,pernas:PERNAS,inferior:PERNAS,inferiores:PERNAS,superior:CIMA,superiores:CIMA,abs:'abdomen',core:'abdomen'};
+  function diasNo(palavras){const hoje=new Date().getDay(),out=[];
+    palavras.forEach(w=>{let d=DIA_PAL[w];if(w==='hoje')d=hoje;if(w==='amanha')d=(hoje+1)%7;if(d!=null&&!out.includes(d))out.push(d);});return out;}
+  function gruposNo(palavras){const out=[],post=palavras.includes('posterior')||palavras.includes('posteriores');
+    palavras.forEach(w=>{if(w==='coxa'&&post)return;const g=GRUPO_DIA[w];if(!g)return;(Array.isArray(g)?g:[g]).forEach(x=>{if(!out.includes(x))out.push(x);});});return out;}
+  /* exercício citado pelo nome, ignorando nomes que são só um grupo ("Abdominal") */
+  function exNo(q,p){const id=acharExercicio(q,p);if(!id)return null;const nt=toks(EXS[id].n.replace(/\(.*?\)/g,''));return nt.every(w=>GRUPO_DIA[w]||GRUPO_DIA[w+'s'])?null:id;}
+  const naDia=d=>(d===0||d===6?'no ':'na ')+DIAS[d].toLowerCase();
+  const V_TIRA=/\b(tira|tirar|tire|remove|remover|remova|sem|nao quero|apaga|apagar|exclui|excluir|menos)\b/;
+  const V_ADD=/\b(adiciona|adicionar|adicione|acrescenta|acrescentar|acrescente|inclui|incluir|inclua|coloca|colocar|coloque|poe|bota|botar|insere|inserir|tambem|junto|alem)\b/;
+  const V_DEF=/\b(so|somente|apenas|exclusivamente|define|definir|defina|muda|mudar|mude|troca|trocar|troque|quero|queria|coloca|colocar|coloque|bota|botar|poe|faz|fazer|faca|monta|montar|monte|seja|vira|virar|deixa|deixar|deixe|altera|alterar|altere|treino de|treinar|adiciona|adicionar|adicione|acrescenta|inclui|incluir|inclua|vai ser|passa a ser)\b/;
+  const V_TROCA=/\b(troca|trocar|troque|substitui|substituir|substitua|muda|mudar|mude|coloca|colocar|coloque|bota|poe)\b/;
+  const FOLGA=/\b(descanso|descansar|folga|off|livre|nao (vou )?treinar|nao treino|sem treino|nao quero treinar|(tira|tirar|tire|remove|remover|apaga|apagar|cancela|cancelar) o treino)\b/;
+  /* "troca X por Y": devolve os dois exercícios */
+  function trocaPor(q,p){const n=norm(q),m=n.match(/^(.*)\b(por|pelo|pela)\b(.*)$/);if(!m)return null;
+    const de=exNo(m[1],p),para=exNo(m[3],p);return de&&para&&de!==para?{de,para}:null;}
+
+  /* pedidos diretos: a IA já executa (campo "fazer") e o app mostra o resultado com Desfazer */
   function comando(q,S){
     const n=norm(q),p=S&&S.perfil;if(!p)return null;
-    const palavras=n.split(' ');
-    const noPlano=id=>Object.values(S.plano.dias||{}).some(d=>d.ex.some(it=>it.id===id));
+    const palavras=n.split(' '),plano=S.plano||{dias:{}};
+    const noPlano=id=>Object.values(plano.dias||{}).some(d=>d.ex.some(it=>it.id===id));
+    const D=d=>plano.dias&&plano.dias[d];
+    const gtxt=gs=>lista(gs.map(g=>GRUPOS[g].n.toLowerCase()));
     if(/\b(oi|ola|bom dia|boa tarde|boa noite|e ai)\b/.test(n)&&palavras.length<=4)
-      return{txt:`Oi, ${p.nome.split(' ')[0]}! Posso tirar dúvidas e também mexer no seu plano. Experimente: "não gosto de leg press", "tenho só 30 minutos", "quero treinar 4 dias", "quero focar em glúteo" ou "registrar peso 70".`};
-    if(/\b(comecar|começar|bora|iniciar)\b.*\btreino\b|\bbora treinar\b/.test(n))return{txt:'Vamos lá! Toque abaixo para abrir o treino de hoje.',acoes:[{lab:'Abrir o treino',cmd:{tipo:'irtreino'},sim:1}]};
+      return{txt:`Oi, ${p.nome.split(' ')[0]}! Posso tirar dúvidas e também mexer no seu plano na hora. Experimente: "na sexta só bíceps", "troca leg press por agachamento", "tenho só 30 minutos", "quero treinar 4 dias" ou "registrar peso 70".`};
+    if(/\b(comecar|bora|iniciar)\b.*\btreino\b|\bbora treinar\b/.test(n))return{txt:'Vamos lá! Toque abaixo para abrir o treino de hoje.',acoes:[{lab:'Abrir o treino',cmd:{tipo:'irtreino'},sim:1}]};
     if(/\b(como estou|meu progresso|minha evolucao|estou evoluindo|como vou)\b/.test(n)){
       const h=(S.hist||[]).filter(x=>!x.antes),d30=h.filter(x=>(Date.now()-new Date(x.data+'T12:00:00'))/864e5<=30).length;
       const prs=h.slice(-10).reduce((a,x)=>a+(x.prs||[]).length,0),c=(S.corpo||[]).filter(x=>+x.peso>0).sort((a,b)=>a.data.localeCompare(b.data));
@@ -482,26 +505,87 @@ const IA=(()=>{
       if(c.length>=2)t+=` Seu peso foi de ${fmtKg(c[0].peso)} para ${fmtKg(c[c.length-1].peso)} kg.`;
       return{txt:t};}
     const mPeso=String(q).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').match(/\b(peso|pesando|pesei|registrar peso|meu peso e)\D{0,12}(\d{2,3}(?:[.,]\d)?)/);
-    if(mPeso){const v=parseFloat(mPeso[2].replace(',','.'));if(v>=30&&v<=250)return{txt:`Registro ${fmtKg(v)} kg hoje?`,acoes:[{lab:'Registrar',cmd:{tipo:'peso',v},sim:1}]};}
+    if(mPeso){const v=parseFloat(mPeso[2].replace(',','.'));if(v>=30&&v<=250)return{txt:'',fazer:{tipo:'peso',v}};}
     const mDor=n.match(/\b(dor|doendo|doi|machuquei|lesao|lesionei|incomoda)\b/);
     if(mDor){const l=palavras.map(w=>PALAVRA_LESAO[w]).find(Boolean);
       if(l)return{txt:`Dor ${l==='lombar'?'na lombar':'no '+l} merece cuidado. Se for forte, em pontada ou não passar, procure um médico ou fisioterapeuta. Posso marcar isso no seu perfil e refazer o plano evitando os exercícios que mais forçam ${ART[l]}.`,acoes:(p.lesoes||[]).includes(l)?[]:[{lab:'Marcar e refazer o plano',cmd:{tipo:'lesao',l},sim:1}]};}
+
+    /* pedidos para um dia da semana */
+    const ds=diasNo(palavras),relativo=/\b(hoje|amanha)\b/.test(n);
+    if(ds.length){
+      const gs=gruposNo(palavras),tp=trocaPor(q,p),exId=tp?null:exNo(q,p);
+      if(ds.length===1&&!gs.length&&!exId&&!tp&&!/\bhoje\b/.test(n)&&/\b(treino|treinos|treinar|treina|treino|exercicio|exercicios)\b/.test(n)&&/\b(qual|quais|que|o que|como e|como esta|mostra|mostrar|ver|tem)\b/.test(n)&&!FOLGA.test(n)){const d=ds[0],T=D(d);
+        return{txt:T?`${naDia(d).replace(/^./,c=>c.toUpperCase())}: ${T.nome.toLowerCase()}, com ${lista(T.ex.map(it=>EXS[it.id].n))}. Para mudar, diga por exemplo "${naDia(d)} só bíceps" ou "tira ${T.ex[0]?EXS[T.ex[0].id].n.toLowerCase():'um exercício'} ${naDia(d).replace(/^n/,'d')}".`:`${DIAS[d]} é dia de descanso no seu plano. Para treinar nesse dia, diga por exemplo "${naDia(d)} quero peito e tríceps".`};}
+      if(ds.length===1&&!gs.length&&!exId&&!tp&&FOLGA.test(n)){const d=ds[0];
+        if(relativo)return{txt:'Tudo bem descansar um dia. Seu plano continua igual e você retoma no próximo treino.'};
+        return D(d)?{txt:'',fazer:{tipo:'diafolga',d}}:{txt:`${DIAS[d]} já é dia de descanso no seu plano.`};}
+      if(ds.length===2&&!gs.length&&!exId&&!tp&&!relativo&&/\b(troca|trocar|troque|inverte|inverter|passa|passar|passe|muda|mudar|mude|move|mover|transfere|transferir|joga|jogar|leva|levar|pra|para)\b/.test(n)){
+        const[a,b]=ds;if(!D(a)&&!D(b))return{txt:`${DIAS[a]} e ${DIAS[b].toLowerCase()} são dias de descanso no seu plano.`};
+        return{txt:'',fazer:{tipo:'diatrocar',a,b}};}
+      if(ds.length===1&&tp){const d=ds[0];
+        return D(d)&&D(d).ex.some(it=>it.id===tp.de)?{txt:'',fazer:{tipo:'trocar',de:tp.de,para:tp.para,d}}:{txt:`${EXS[tp.de].n} não está no treino ${naDia(d).replace(/^n/,'d')}.`};}
+      if(ds.length===1&&exId){const d=ds[0],tem=D(d)&&D(d).ex.some(it=>it.id===exId);
+        if(V_TIRA.test(n))return tem?{txt:'',fazer:{tipo:'diarmex',d,id:exId}}:{txt:`${EXS[exId].n} não está no treino ${naDia(d).replace(/^n/,'d')}.`};
+        if(V_ADD.test(n)||V_DEF.test(n))return tem?{txt:`${EXS[exId].n} já está no treino ${naDia(d).replace(/^n/,'d')}.`}:{txt:'',fazer:{tipo:'diaaddex',d,id:exId}};}
+      if(ds.length===1&&gs.length){const d=ds[0];
+        if(V_TIRA.test(n)&&!/\b(so|somente|apenas)\b/.test(n)){const tem=D(d)?gs.filter(g=>D(d).ex.some(it=>EXS[it.id].g===g)):[];
+          return tem.length?{txt:'',fazer:{tipo:'diatirag',d,gs:tem}}:{txt:`O treino ${naDia(d).replace(/^n/,'d')} não tem ${gtxt(gs)}.`};}
+        if(V_DEF.test(n)||V_ADD.test(n)||(palavras.length<=5&&!String(q).includes('?'))){
+          const add=!!D(d)&&V_ADD.test(n)&&!/\b(so|somente|apenas|exclusivamente)\b/.test(n);
+          return{txt:'',fazer:{tipo:'diagrupos',d,gs,add}};}}
+    }
+
     const mMin=n.match(/\b(\d{2,3})\s*(min|minutos)\b/);
-    if(mMin&&/\b(tenho|so|apenas|treino|tempo|ter)\b/.test(n)){const v=Math.max(20,Math.min(120,+mMin[1]));return{txt:`Hoje seus treinos levam uns ${p.tempo} min. Refaço o plano para caber em ${v} min?`,acoes:[{lab:`Refazer para ${v} min`,cmd:{tipo:'tempo',v},sim:1}]};}
-    if(/\b(mais curto|menos tempo|treino longo|muito longo|demora muito)\b/.test(n)){const v=Math.max(20,(+p.tempo||45)-15);return{txt:`Posso encurtar para uns ${v} min por treino, mantendo os exercícios principais.`,acoes:[{lab:`Refazer para ${v} min`,cmd:{tipo:'tempo',v},sim:1}]};}
+    if(mMin&&/\b(tenho|so|apenas|treino|tempo|ter)\b/.test(n)){const v=Math.max(20,Math.min(120,+mMin[1]));
+      if(relativo)return{txt:`Se for só hoje, faça os primeiros exercícios e pule os isolados do fim. Quer que todos os treinos caibam em ${v} min?`,acoes:[{lab:`Refazer para ${v} min`,cmd:{tipo:'tempo',v},sim:1}]};
+      return{txt:'',fazer:{tipo:'tempo',v}};}
+    if(/\b(mais curto|menos tempo|treino longo|muito longo|demora muito)\b/.test(n)){const v=Math.max(20,(+p.tempo||45)-15);return{txt:'',fazer:{tipo:'tempo',v}};}
     const mDias=n.match(/\b([1-6]|um|dois|tres|quatro|cinco|seis)\s*(dias|vezes)\b/);
     if(mDias){const map={um:1,dois:2,tres:3,quatro:4,cinco:5,seis:6};const v=map[mDias[1]]||+mDias[1];
-      return{txt:`Hoje você treina ${(p.dias||[]).length} dias. Monto um plano novo com ${v} ${v===1?'dia':'dias'}? Depois você ajusta quais dias no perfil.`,acoes:[{lab:`Refazer com ${v} dias`,cmd:{tipo:'dias',v},sim:1}]};}
+      if(v===(p.dias||[]).length)return{txt:`Você já treina ${v} ${v===1?'dia':'dias'} por semana. Para trocar quais dias, diga por exemplo "passa o treino de segunda para terça".`};
+      return{txt:'',fazer:{tipo:'dias',v}};}
     if(/\b(focar|foco|priorizar|crescer mais|aumentar|desenvolver|mais volume)\b/.test(n)){const g=palavras.map(w=>PALAVRA_GRUPO[w]).find(Boolean);
-      if(g&&!(p.evitar||[]).includes(g))return{txt:`Dou mais volume para ${GRUPOS[g].n.toLowerCase()} e coloco esse grupo no começo dos treinos?`,acoes:(p.foco||[]).includes(g)?[]:[{lab:`Focar em ${GRUPOS[g].n.toLowerCase()}`,cmd:{tipo:'foco',g},sim:1}]};}
-    if(/\b(nao quero|sem|tirar|parar de treinar)\b/.test(n)){const g=palavras.map(w=>PALAVRA_GRUPO[w]).find(Boolean);const exId=acharExercicio(q);
-      if(g&&!exId)return{txt:`Tiro ${GRUPOS[g].n.toLowerCase()} do seu plano?`,acoes:[{lab:`Tirar ${GRUPOS[g].n.toLowerCase()}`,cmd:{tipo:'evitar',g},sim:1}]};}
-    if(/\b(nao gosto|odeio|trocar|substituir|tirar|ruim|chato|aparelho ocupado|nao tem)\b/.test(n)){const id=acharExercicio(q);
-      if(id){const alt=alternativas(id,e=>serve(e,p)).slice(0,3);
-        return{txt:noPlano(id)?`Sem problema. Posso trocar ${EXS[id].n} por:`:`${EXS[id].n} não está no seu plano. Alternativas parecidas: ${lista(alt.map(x=>EXS[x].n))}.`,ex:id,
-          acoes:noPlano(id)?[...alt.map(x=>({lab:EXS[x].n,cmd:{tipo:'trocar',de:id,para:x}})),{lab:'Só tirar do plano',cmd:{tipo:'remover',id}}]:[]};}}
+      if(g&&!(p.evitar||[]).includes(g))return(p.foco||[]).includes(g)?{txt:`${GRUPOS[g].n} já está como foco no seu plano, com volume extra e no começo dos treinos.`}:{txt:'',fazer:{tipo:'foco',g}};}
+    const tp=trocaPor(q,p);
+    if(tp&&V_TROCA.test(n)){
+      if(!noPlano(tp.de))return{txt:`${EXS[tp.de].n} não está no seu plano. Quer colocar ${EXS[tp.para].n} em algum dia? Diga, por exemplo, "coloca ${EXS[tp.para].n.toLowerCase()} na segunda".`};
+      return{txt:'',fazer:{tipo:'trocar',de:tp.de,para:tp.para}};}
+    if(/\b(nao quero|sem|tirar|tira|parar de treinar)\b/.test(n)){const g=palavras.map(w=>PALAVRA_GRUPO[w]).find(Boolean);const exId=exNo(q,p);
+      if(g&&!exId)return{txt:'',fazer:{tipo:'evitar',g}};}
+    if(/\b(nao gosto|odeio|trocar|troca|troque|substituir|substitui|tirar|tira|tire|remove|remover|ruim|chato|aparelho ocupado|nao tem)\b/.test(n)){const id=acharExercicio(q,p);
+      if(id){const e0=EXS[id];
+        const alt=alternativas(id,e=>serve(e,p)).map((x,i)=>{const e=EXS[x];return{x,s:-i*.5+(ESSENCIAL.has(x)?1.5:0)+(e.t===e0.t?1:0)+(e.eq.some(q=>e0.eq.includes(q))?1:0)+(p.local==='academia'&&e.eq.includes('corpo')?-3:0)+(noPlano(x)?-2:0)};})
+          .sort((a,b)=>b.s-a.s).map(o=>o.x).slice(0,3);
+        if(!noPlano(id))return{txt:`${EXS[id].n} não está no seu plano. Alternativas parecidas: ${lista(alt.map(x=>EXS[x].n))}.`,ex:id};
+        if(/\b(tira|tirar|tire|remove|remover|remova|exclui|excluir|apaga)\b/.test(n)&&!/\b(troca|trocar|substitu)/.test(n))return{txt:'',fazer:{tipo:'remover',id}};
+        if(!alt.length)return{txt:'',fazer:{tipo:'remover',id}};
+        return{txt:'',fazer:{tipo:'trocar',de:id,para:alt[0]},ex:alt[0],
+          acoes:[...alt.slice(1).map(x=>({lab:'Prefiro '+EXS[x].n,cmd:{tipo:'trocar',de:alt[0],para:x}})),{lab:'Só tirar do plano',cmd:{tipo:'remover',id:alt[0]}}]};}}
     return null;
   }
 
-  return{calc,gerar,comando,analisar,insights,responder,sugestao,fase,prescricao,serve,eqOk,estimaMin,volumePlano,faixa,nomeDia,alvos,OBJ,NIVEL,LOCAL,DIAS,DIAS_C,ORDEM_SEMANA,PADRAO,lista,fmtKg,uidl};
+  /* monta um dia só com os grupos pedidos (ou acrescenta esses grupos ao dia) */
+  function montarDia(gs,p,prefs,plano,d,manter){
+    const usados=new Set();Object.entries(plano&&plano.dias||{}).forEach(([k,D])=>{if(+k!==d)D.ex.forEach(it=>usados.add(it.id));});
+    const base=manter?manter.slice():[],novos=[],todos=()=>[...base,...novos];
+    const conta=(g,L)=>L.filter(it=>EXS[it.id].g===g).length;
+    const cap=Math.max(3,Math.floor(((+p.tempo||45)-5)/porExercicioMin(p)));
+    const peq=g=>g==='trapezio'||g==='antebraco';
+    const lim=g=>manter?conta(g,base)+(peq(g)?1:2):gs.length===1?(peq(g)?3:GRUPOS[g].tam==='G'?6:GRUPOS[g].tam==='M'?5:4):(peq(g)?2:GRUPOS[g].tam==='P'?3:4);
+    const alvo=manter?base.length+gs.reduce((a,g)=>a+(peq(g)?1:2),0):Math.max(cap,gs.length);
+    const ord=gs.slice().sort((a,b)=>'GMP'.indexOf(GRUPOS[a].tam)-'GMP'.indexOf(GRUPOS[b].tam));
+    const esg=new Set();
+    for(let r=0;r<12&&todos().length<alvo;r++){let mudou=false;
+      for(const g of ord){if(todos().length>=alvo)break;if(esg.has(g)||conta(g,todos())>=lim(g))continue;
+        const x=escolher(g,1,todos(),usados,p,prefs);if(!x.length){esg.add(g);continue;}
+        novos.push({u:uidl(),id:x[0],...prescricao(x[0],p)});mudou=true;}
+      if(!mudou)break;}
+    const foco=new Set(p.foco||[]);
+    const ordemG=g=>(foco.has(g)?0:10)+(g==='abdomen'?50:GRUPOS[g].tam==='G'?1:GRUPOS[g].tam==='M'?2:3)+GRUPO_IDS.indexOf(g)/100;
+    const ordena=L=>L.sort((a,b)=>{const A=EXS[a.id],B=EXS[b.id];return ordemG(A.g)-ordemG(B.g)||(A.t==='c'?0:1)-(B.t==='c'?0:1);});
+    const ex=manter?[...base,...ordena(novos)]:ordena(novos);
+    return{nome:nomeDia([...new Set(ex.map(it=>EXS[it.id].g))]),ex,novos:novos.map(it=>it.id)};
+  }
+
+  return{calc,gerar,comando,montarDia,naDia,analisar,insights,responder,sugestao,fase,prescricao,serve,eqOk,estimaMin,volumePlano,faixa,nomeDia,alvos,OBJ,NIVEL,LOCAL,DIAS,DIAS_C,ORDEM_SEMANA,PADRAO,lista,fmtKg,uidl};
 })();

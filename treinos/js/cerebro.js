@@ -72,7 +72,8 @@ const Cerebro=(()=>{
     'aumentar diminuir reduzir bater chegar atingir completar engordar emagrecer secar definir crescer melhor melhorar pior opcao opcoes sugestao sugestoes ideia ideias plano planos receita receitas prato pratos '+
     'gluteo gluteos perna pernas braco bracos ombro ombros costas peito barriga abdomen joelho lombar punho cotovelo dor doendo dolorido musculo musculos massa forca saude corpo peso altura idade '+
     'obrigado obrigada valeu beleza certo entendi legal show sabe saber falar fala voce ola bom boa dia '+
-    'sem com mas porem tambem entao assim isso essa esse este aqui ali sim nao talvez vez vezes rapido rapida leve pesado pesada facil dificil normal').split(' '));
+    'sem com mas porem tambem entao assim isso essa esse este aqui ali sim nao talvez vez vezes rapido rapida leve pesado pesada facil dificil normal '+
+    'segunda terca quarta quinta sexta sabado domingo somente apenas define definir defina coloca colocar coloque adiciona adicionar adicione tira tirar tire remove remover troca trocar troque passa passar muda mudar inverte deixa deixar folga descanso descansar biceps triceps trapezio antebraco panturrilha quadriceps posterior posteriores exercicio exercicios superiores inferiores seja sejam sera fica fique vira virar inverte inverter substitui substituir substitua').split(' '));
   let VOCAB=null;
   function vocab(){
     if(VOCAB)return VOCAB;const v=new Set();
@@ -201,7 +202,7 @@ const Cerebro=(()=>{
 
     /* ações no plano de treino (trocar exercício, dias, tempo, foco, dor, registrar peso...) */
     const cmd=IA.comando(t,S);
-    if(cmd&&!alimentosNo(t).length&&!refeicaoNo(t)){cmd.int='cmd';return r({...cmd,ctx:{tipo:'cmd'}});}
+    if(cmd&&!alimentosNo(t).length&&!refeicaoNo(t)){cmd.int='cmd'+(cmd.fazer?':'+cmd.fazer.tipo:'');return r({...cmd,ctx:{tipo:'cmd'}});}
 
     /* comida */
     const als=alimentosNo(t);

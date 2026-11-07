@@ -719,22 +719,77 @@ function perguntar(q){
   respondendo=true;desenhaChat(true);
   setTimeout(()=>{
     let r;try{r=Cerebro.responder(q,S,chatCtx)||{txt:'Não entendi.'};}catch(e){console.error(e);r={txt:'Tive um problema para responder isso. Tente de outro jeito.'};}
-    msgs.push({id:uid(),t:r.txt,refeicoes:r.refeicoes,tabela:r.tabela,ex:r.ex,acoes:r.acoes,sugs:r.sugs,rel:r.rel});
+    const id=uid();let txt=r.txt,acoes=r.acoes;
+    if(r.fazer){const f=aplicarCmd(r.fazer,id);txt=f.t;acoes=f.mudou?[...(r.acoes||[]),...f.acoes]:[];}
+    msgs.push({id,t:txt,refeicoes:r.refeicoes,tabela:r.tabela,ex:r.ex,acoes,sugs:r.sugs,rel:r.rel});
     if(msgs.length>60)msgs.splice(0,msgs.length-60);
     respondendo=false;save();desenhaChat(false);
   },Math.min(900,300+q.length*6));
 }
+/* aplica um pedido do chat, guardando como estava para o botão Desfazer */
+const antesCmd={};
+const NAV=new Set(['irtreino','irplano']);
+function fotoEstado(){return JSON.stringify({plano:S.plano,perfil:S.perfil,corpo:S.corpo,apagados:S.apagados,pref:S.ia.pref});}
+function aplicarCmd(c,id){
+  const antes=fotoEstado();let t;
+  try{t=executarCmd(c);}catch(e){console.error(e);t='Não consegui fazer essa mudança. Tente de outro jeito ou ajuste em Plano.';}
+  const mudou=fotoEstado()!==antes;
+  if(mudou){antesCmd[id]=antes;const ks=Object.keys(antesCmd);if(ks.length>20)delete antesCmd[ks[0]];}
+  const acoes=mudou?[{lab:'Desfazer',cmd:{tipo:'desfazer',ref:id}},...(c.tipo==='peso'?[]:[{lab:'Ver o plano',cmd:{tipo:'irplano'},sim:1}])]:[];
+  return{t:t||'Feito.',mudou,acoes};
+}
+function nomeAuto(D){return !D.nome||D.nome===IA.nomeDia([...new Set(D.ex.map(it=>EXS[it.id].g))])||/^Treino de /.test(D.nome);}
+function ajustaDiasPerfil(){const p=S.perfil;p.dias=Object.keys(S.plano.dias).map(Number).sort((a,b)=>OS.indexOf(a)-OS.indexOf(b));diaSel=null;diaPlano=null;}
+const naDia=d=>IA.naDia(d),doDia=d=>naDia(d).replace(/^n/,'d');
+const nomesEx=L=>IA.lista(L.map(id=>EXS[id].n));
+const gtxt=gs=>IA.lista(gs.map(g=>GRUPOS[g].n.toLowerCase()));
 function regerarPlano(msg){S.plano=IA.gerar(S.perfil,S.ia.pref);diaPlano=null;diaSel=null;return msg+` Plano novo: ${S.plano.tipo.toLowerCase()}. Veja em Plano.`;}
 function executarCmd(c){
   const p=S.perfil;let txt='Feito.';
-  if(c.tipo==='trocar'){Object.values(S.plano.dias).forEach(D=>D.ex.forEach(it=>{if(it.id===c.de){it.id=c.para;const ob=IA.prescricao(c.para,p).obs;if(ob)it.obs=ob;else delete it.obs;}}));pref(c.de,-1);pref(c.para,1);marcarEditado();txt=`Feito: ${EXS[c.para].n} entrou no lugar de ${EXS[c.de].n} em todos os treinos.`;}
-  else if(c.tipo==='remover'){Object.values(S.plano.dias).forEach(D=>{D.ex=D.ex.filter(it=>it.id!==c.id);});pref(c.id,-1);marcarEditado();txt=`Tirei ${EXS[c.id].n} do seu plano.`;}
-  else if(c.tipo==='tempo'){p.tempo=c.v;txt=regerarPlano(`Pronto, treinos de uns ${c.v} min.`);}
+  if(c.tipo==='trocar'){let n=0;Object.entries(S.plano.dias).forEach(([d,D])=>{if(c.d!=null&&+d!==c.d)return;D.ex.forEach(it=>{if(it.id===c.de){it.id=c.para;n++;const ob=IA.prescricao(c.para,p).obs;if(ob)it.obs=ob;else delete it.obs;}});});
+    if(!n)return `${EXS[c.de].n} não está mais no seu plano.`;
+    pref(c.de,-1);pref(c.para,1);marcarEditado();txt=`Pronto! ${EXS[c.para].n} entrou no lugar de ${EXS[c.de].n}${c.d!=null?' '+naDia(c.d):n>1?' em todos os treinos':''}.`;}
+  else if(c.tipo==='remover'){Object.values(S.plano.dias).forEach(D=>{D.ex=D.ex.filter(it=>it.id!==c.id);});
+    const vaz=Object.keys(S.plano.dias).filter(d=>!S.plano.dias[d].ex.length).map(Number);vaz.forEach(d=>delete S.plano.dias[d]);if(vaz.length)ajustaDiasPerfil();
+    pref(c.id,-1);marcarEditado();txt=`Pronto, tirei ${EXS[c.id].n} do seu plano.${vaz.length?` ${IA.lista(vaz.map(d=>DIAS[d]))} ficou sem exercícios e virou descanso.`:''}`;}
+  else if(c.tipo==='diagrupos'){const D0=S.plano.dias[c.d],add=c.add&&D0;
+    const novo=IA.montarDia(c.gs,p,S.ia.pref,S.plano,c.d,add?D0.ex:null);
+    if(!novo.novos.length)return `Não achei exercícios de ${gtxt(c.gs)} que sirvam para o seu local e as suas restrições. Monte o dia em Plano, pela biblioteca.`;
+    const nome=add&&!nomeAuto(D0)?D0.nome:novo.nome;
+    S.plano.dias[c.d]={nome,ex:novo.ex};ajustaDiasPerfil();
+    const ev=(p.evitar||[]).filter(g=>c.gs.includes(g));if(ev.length)p.evitar=p.evitar.filter(g=>!ev.includes(g));
+    marcarEditado();
+    txt=add?`Pronto! Coloquei ${gtxt(c.gs)} ${naDia(c.d)}: ${nomesEx(novo.novos)}.`
+      :`Pronto! O treino ${doDia(c.d)} agora é só de ${gtxt(c.gs)}, com ${novo.ex.length} ${novo.ex.length===1?'exercício':'exercícios'}: ${nomesEx(novo.novos)}. Cada um com ${IA.PADRAO.s} séries de ${IA.PADRAO.r}.`;
+    if(ev.length)txt+=` Tirei ${gtxt(ev)} da lista de grupos para evitar.`;}
+  else if(c.tipo==='diatirag'){const D=S.plano.dias[c.d];if(!D)return 'Esse dia já é de descanso.';const auto=nomeAuto(D);
+    const tirados=D.ex.filter(it=>c.gs.includes(EXS[it.id].g));D.ex=D.ex.filter(it=>!c.gs.includes(EXS[it.id].g));
+    if(!D.ex.length){delete S.plano.dias[c.d];ajustaDiasPerfil();marcarEditado();txt=`Pronto, tirei ${gtxt(c.gs)} ${doDia(c.d)}. Como não sobrou nenhum exercício, ${DIAS[c.d].toLowerCase()} virou dia de descanso.`;}
+    else{if(auto)D.nome=IA.nomeDia([...new Set(D.ex.map(it=>EXS[it.id].g))]);marcarEditado();txt=`Pronto, tirei ${gtxt(c.gs)} ${doDia(c.d)}: ${nomesEx(tirados.map(it=>it.id))}.`;}}
+  else if(c.tipo==='diaaddex'){let D=S.plano.dias[c.d];if(!D){D=S.plano.dias[c.d]={nome:'',ex:[]};}const auto=nomeAuto(D);
+    D.ex.push({u:uid(),id:c.id,...IA.prescricao(c.id,p)});if(auto)D.nome=IA.nomeDia([...new Set(D.ex.map(it=>EXS[it.id].g))]);
+    ajustaDiasPerfil();pref(c.id,.5);marcarEditado();txt=`Pronto! ${EXS[c.id].n} entrou no treino ${doDia(c.d)}, com ${IA.PADRAO.s} séries de ${EXS[c.id].seg?'30 s':IA.PADRAO.r}.`;}
+  else if(c.tipo==='diarmex'){const D=S.plano.dias[c.d];if(!D)return 'Esse dia já é de descanso.';const auto=nomeAuto(D);D.ex=D.ex.filter(it=>it.id!==c.id);
+    if(!D.ex.length){delete S.plano.dias[c.d];txt=`Pronto, tirei ${EXS[c.id].n}. Como não sobrou nenhum exercício, ${DIAS[c.d].toLowerCase()} virou dia de descanso.`;}
+    else{if(auto)D.nome=IA.nomeDia([...new Set(D.ex.map(it=>EXS[it.id].g))]);txt=`Pronto, tirei ${EXS[c.id].n} do treino ${doDia(c.d)}.`;}
+    ajustaDiasPerfil();pref(c.id,-.5);marcarEditado();}
+  else if(c.tipo==='diafolga'){if(!S.plano.dias[c.d])return `${DIAS[c.d]} já é dia de descanso.`;
+    if(Object.keys(S.plano.dias).length<=1)return 'Esse é o único dia de treino do seu plano. Para pausar tudo, é só não abrir o treino.';
+    delete S.plano.dias[c.d];ajustaDiasPerfil();marcarEditado();txt=`Pronto, ${DIAS[c.d].toLowerCase()} agora é dia de descanso. Seu plano fica com ${S.perfil.dias.length} ${S.perfil.dias.length===1?'dia':'dias'}: ${S.perfil.dias.map(d=>DC[d]).join(', ')}.`;}
+  else if(c.tipo==='diatrocar'){const A=S.plano.dias[c.a],B=S.plano.dias[c.b];
+    if(B)S.plano.dias[c.a]=B;else delete S.plano.dias[c.a];
+    if(A)S.plano.dias[c.b]=A;else delete S.plano.dias[c.b];
+    ajustaDiasPerfil();marcarEditado();
+    txt=A&&B?`Pronto, troquei: ${DIAS[c.a].toLowerCase()} agora é ${B.nome.toLowerCase()} e ${DIAS[c.b].toLowerCase()} é ${A.nome.toLowerCase()}.`:`Pronto, o treino ${doDia(A?c.a:c.b)} passou para ${DIAS[A?c.b:c.a].toLowerCase()}. ${DIAS[A?c.a:c.b]} virou descanso.`;}
+  else if(c.tipo==='desfazer'){const a=antesCmd[c.ref];if(!a)return 'Não consigo mais desfazer essa mudança. Ajuste direto em Plano.';
+    const o=JSON.parse(a);S.plano=o.plano;S.perfil=o.perfil;S.corpo=o.corpo;S.apagados=o.apagados;S.ia.pref=o.pref;delete antesCmd[c.ref];diaSel=null;diaPlano=null;txt='Desfeito. Voltei tudo como estava.';}
+  else if(c.tipo==='irplano'){ir('plano');return null;}
+  else if(c.tipo==='tempo'){p.tempo=c.v;txt=regerarPlano(`Pronto! Refiz o plano para treinos de uns ${c.v} min.`);}
   else if(c.tipo==='dias'){const MOD={1:[1],2:[1,4],3:[1,3,5],4:[1,2,4,5],5:[1,2,3,4,5],6:[1,2,3,4,5,6]};const atual=p.dias||[];
     let novo=atual.length>=c.v?Array.from({length:c.v},(_,i)=>atual[Math.round(i*atual.length/c.v)]):MOD[c.v];p.dias=[...new Set(novo)].sort((a,b)=>OS.indexOf(a)-OS.indexOf(b));
     txt=regerarPlano(`Pronto, ${p.dias.length} dias: ${p.dias.map(d=>DC[d]).join(', ')}. Dá para trocar os dias em Perfil.`);}
-  else if(c.tipo==='foco'){p.foco=[...new Set([...(p.foco||[]),c.g])];p.evitar=(p.evitar||[]).filter(g=>g!==c.g);txt=regerarPlano(`Foco em ${GRUPOS[c.g].n.toLowerCase()} adicionado.`);}
-  else if(c.tipo==='evitar'){p.evitar=[...new Set([...(p.evitar||[]),c.g])];p.foco=(p.foco||[]).filter(g=>g!==c.g);txt=regerarPlano(`Tirei ${GRUPOS[c.g].n.toLowerCase()} do seu treino.`);}
+  else if(c.tipo==='foco'){p.foco=[...new Set([...(p.foco||[]),c.g])];p.evitar=(p.evitar||[]).filter(g=>g!==c.g);txt=regerarPlano(`Pronto! ${GRUPOS[c.g].n} virou foco: mais volume e no começo dos treinos.`);}
+  else if(c.tipo==='evitar'){p.evitar=[...new Set([...(p.evitar||[]),c.g])];p.foco=(p.foco||[]).filter(g=>g!==c.g);txt=regerarPlano(`Pronto, tirei ${GRUPOS[c.g].n.toLowerCase()} do seu treino.`);}
   else if(c.tipo==='lesao'){p.lesoes=[...new Set([...(p.lesoes||[]),c.l])];txt=regerarPlano('Anotei no seu perfil.');}
   else if(c.tipo==='tirarlesao'){p.lesoes=(p.lesoes||[]).filter(l=>l!==c.l);txt=regerarPlano('Restrição retirada.');}
   else if(c.tipo==='peso'){const d=hojeISO(),i=S.corpo.findIndex(x=>x.data===d);if(i>=0)S.corpo[i].peso=c.v;else S.corpo.push({data:d,peso:c.v});S.apagados=S.apagados.filter(x=>x!=='c:'+d);p.peso=c.v;txt=`Peso de ${fk(c.v)} kg registrado hoje. Acompanhe em Evolução, Corpo.`;}
@@ -1036,7 +1091,11 @@ document.addEventListener('click',e=>{
     case 'painel':painelNumeros();break;
     case 'limparchat':armar(b,()=>{S.ia.chat=[];chatCtx={};save();show('coach');},'Limpar?');break;
     case 'iacmd':{const m=chatMsgs().find(x=>x.id===b.dataset.m),a=m&&m.acoes&&m.acoes[+b.dataset.a];if(!a||m.feito)break;
-      m.feito=true;const t=executarCmd(a.cmd);if(t){chatMsgs().push({id:uid(),t});}save();if(t)desenhaChat(false);break;}
+      if(NAV.has(a.cmd.tipo)){executarCmd(a.cmd);break;}
+      m.feito=true;const id=uid();
+      if(a.cmd.tipo==='desfazer'){const t=executarCmd(a.cmd);chatMsgs().push({id,t});}
+      else{const f=aplicarCmd(a.cmd,id);chatMsgs().push({id,t:f.t,acoes:f.acoes});}
+      save();desenhaChat(false);break;}
     case 'iaacao':{const x=IA.insights(S)[+b.dataset.i];if(x)acaoIA(x.acao);break;}
     case 'zerakcal':S.ia.ajKcal=0;save();fecharDlg();painelNumeros();break;
     /* evolução */
