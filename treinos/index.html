@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1E3DB8">
+<meta name="description" content="Treino de musculação montado por uma IA local, com bonecos animados, descanso, histórico e evolução.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Treinos">
+<title>Ryke Treinos</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="img/icon-192.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="stylesheet" href="fontes.css">
+<link rel="stylesheet" href="estilo.css?v=1">
+</head>
+<body>
+<header class="appbar" id="appbar">
+  <button class="icobtn" id="bhome" type="button" aria-label="Início, trocar de pessoa" hidden><svg viewBox="0 0 24 24"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg></button>
+  <h1 id="titulo">Ryke Treinos</h1>
+  <span class="sem" id="semchip"></span>
+  <span class="sync" id="sync" title="Sincronização" hidden></span>
+</header>
+<main id="main"><div class="carregando">Carregando…</div></main>
+
+<div class="dock" id="dock">
+  <div class="barra" id="barra" hidden role="status" aria-live="polite">
+    <div class="in">
+      <div class="t" id="bt">0:00</div>
+      <div class="lab"><b id="btit">Descanso</b><span id="bsub"></span><div class="linha" id="blinha"><div id="bfill"></div></div></div>
+      <button id="bmenos" type="button" aria-label="Menos 15 segundos">−15</button>
+      <button id="bplus" type="button" aria-label="Mais 15 segundos">+15</button>
+      <button id="bacao" type="button">Pular</button>
+    </div>
+  </div>
+  <nav class="nav" id="nav" aria-label="Seções" hidden>
+    <a href="#treino" data-n="treino"><svg viewBox="0 0 24 24"><path d="M3 9v6M6.5 6.5v11M17.5 6.5v11M21 9v6M6.5 12h11"/></svg>Treino</a>
+    <a href="#plano" data-n="plano"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>Plano</a>
+    <a href="#coach" data-n="coach"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z"/></svg>Coach IA</a>
+    <a href="#evolucao" data-n="evolucao"><svg viewBox="0 0 24 24"><path d="M4 4v16h16"/><path d="M8 15l4-4 3 3 5-6"/></svg>Evolução</a>
+    <a href="#perfil" data-n="perfil"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg>Perfil</a>
+  </nav>
+</div>
+
+<dialog id="dlg"><div id="dconteudo"></div></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<input type="file" id="arquivo" accept="application/json,.json" hidden>
+
+<script src="js/motor.js?v=1"></script>
+<script src="js/exercicios.js?v=1"></script>
+<script src="js/conhecimento.js?v=1"></script>
+<script src="js/ia-pesos.js?v=1"></script>
+<script src="js/ia.js?v=1"></script>
+<script src="js/nuvem.js?v=1"></script>
+<script src="js/app.js?v=1"></script>
+</body>
+</html>
