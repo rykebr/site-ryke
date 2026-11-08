@@ -48,6 +48,7 @@ const Narrador = (() => {
   let ctx = null, fonte = null, inicioAudio = 0, durAtual = 0, palavrasAtual = [], raf = 0;
   let prefetch = new Map();
   const baixadas = new Set();
+  const baixando = new Map();
   let avisouLenta = false;
   let semNeural = false; // a voz neural falhou nesta sessão (sem internet no primeiro uso): usa a do aparelho
   let vigia = 0, estimador = 0, temLimites = {};
@@ -110,7 +111,7 @@ const Narrador = (() => {
   /* ---------------- worker Piper ---------------- */
   function chamar(tipo, dados, aoProg) {
     if (!worker) {
-      worker = new Worker(new URL('js/voz-piper.js', location.href).href);
+      worker = new Worker(new URL('js/voz-piper.js?v=4', location.href).href);
       worker.onmessage = (e) => {
         const p = pedidos.get(e.data.id);
         if (!p) return;
@@ -305,13 +306,26 @@ const Narrador = (() => {
     if (ctx.state === 'suspended') await ctx.resume();
     let r;
     try {
-      // primeira vez com esta voz: baixa mostrando o progresso (fica guardada para usar offline)
-      if (!baixadas.has(v.id) && !(await vozBaixada(v))) {
-        emitir('baixandoVoz', { nome: v.nome, pct: 0 });
-        await baixarVoz(v, (p) => { if (p.parte === 'voz' && p.t) emitir('baixandoVoz', { nome: v.nome, pct: p.n / p.t }); });
-        emitir('baixandoVoz', { nome: v.nome, pct: 1, fim: true });
+      // primeira vez com esta voz: baixa em segundo plano (fica guardada para usar offline) e, enquanto isso,
+      // a narração já começa com a voz do aparelho; quando a voz neural fica pronta, troca na frase seguinte
+      if (!baixadas.has(v.id)) {
+        if (await vozBaixada(v)) baixadas.add(v.id);
+        else {
+          if (!baixando.has(v.id)) {
+            emitir('baixandoVoz', { nome: v.nome, pct: 0 });
+            const pr = baixarVoz(v, (p) => { if (p.parte === 'voz' && p.t) emitir('baixandoVoz', { nome: v.nome, pct: p.n / p.t }); })
+              .then(() => { baixadas.add(v.id); emitir('baixandoVoz', { nome: v.nome, pct: 1, fim: true }); })
+              .catch((e) => { emitir('baixandoVoz', { nome: v.nome, falhou: true, motivo: e.message }); throw e; })
+              .finally(() => baixando.delete(v.id));
+            pr.catch(() => null);
+            baixando.set(v.id, pr);
+          }
+          const { sistema } = await listarVozes(v.lang);
+          if (ger !== geracao) return;
+          if (sistema[0]) return falarSistema(sistema[0], est, ger);
+          await baixando.get(v.id); // sem voz no aparelho: espera a neural
+        }
       }
-      baixadas.add(v.id);
       if (ger !== geracao) return;
       const t0 = performance.now();
       r = await sintetizar(v, fi, est);

@@ -1212,7 +1212,7 @@
           S.cfg.voz.voz = v.id; Narrador.ajustar({ voz: v.id }); salvar();
           toast(`Voz ${v.nome} pronta. Funciona sem internet.`);
           pintarVozes(el, lang, aoEscolher);
-        } catch (er) { info.textContent = 'Falhou: ' + er.message; ba.disabled = false; }
+        } catch (er) { info.textContent = `Não consegui baixar (${er.message}). Toque em Baixar de novo: continua de onde parou.`; ba.disabled = false; }
       } else if (es) {
         S.cfg.voz.estilo = es.dataset.estilo; Narrador.ajustar({ estilo: es.dataset.estilo }); salvar();
         $$('[data-estilo]', el).forEach((x) => x.setAttribute('aria-pressed', String(x === es)));
@@ -1509,7 +1509,11 @@
   Narrador.on('parou', () => { if (leitorAberto) Leitor.limparDestaque(); atualizarBarraNarracao(); });
   Narrador.on('estado', () => atualizarBarraNarracao());
   Narrador.on('erro', (m) => toast(m, 4500));
-  Narrador.on('baixandoVoz', (d) => toast(d.fim ? `Voz ${d.nome} pronta. Ela fica guardada para usar offline.` : `Baixando a voz ${d.nome} (só na primeira vez): ${Math.round(d.pct * 100)}%`, d.fim ? 3000 : 60000));
+  Narrador.on('baixandoVoz', (d) => toast(
+    d.falhou ? `Não consegui baixar a voz ${d.nome} (${d.motivo}). Sigo com a voz do aparelho e tento de novo na próxima narração.`
+      : d.fim ? `Voz ${d.nome} pronta: a narração troca para ela na próxima frase. Fica guardada para usar offline.`
+        : `Baixando a voz ${d.nome} (só na primeira vez): ${Math.round(d.pct * 100)}%. Enquanto isso, leio com a voz do aparelho.`,
+    d.falhou ? 6000 : d.fim ? 3500 : 60000));
   Narrador.on('dormiu', () => toast('Timer de dormir: narração pausada. Boa noite!', 4000));
   Narrador.on('fim', () => { if (leitorAberto) mostrarFim(leitorAberto.item); });
   async function iniciarNarracao() {

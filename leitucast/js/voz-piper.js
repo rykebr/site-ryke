@@ -14,18 +14,36 @@ const sessoes = new Map();
 async function obter(url, aoProgresso) {
   let cache = null;
   try { cache = await caches.open(CACHE); const r = await cache.match(url); if (r) return await r.arrayBuffer(); } catch (e) { cache = null; }
-  const r = await fetch(url);
-  if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + url);
-  const total = +(r.headers.get('Content-Length') || 0);
-  const leitor = r.body.getReader();
+  // download resistente: se a conexão cair ou travar (20 s sem dados), tenta de novo continuando de onde parou
   const partes = [];
-  let n = 0;
-  for (;;) {
-    const { done, value } = await leitor.read();
-    if (done) break;
-    partes.push(value); n += value.length;
-    if (aoProgresso) aoProgresso(n, total);
+  let n = 0, total = 0, ultimoErro = null;
+  for (let tentativa = 0; tentativa < 4; tentativa++) {
+    const ctl = new AbortController();
+    let vigia = setTimeout(() => ctl.abort(), 30000);
+    try {
+      const r = await fetch(url, { signal: ctl.signal, headers: n ? { Range: `bytes=${n}-` } : {} });
+      if (n && r.status !== 206) { partes.length = 0; n = 0; } // o servidor não continuou: recomeça
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      if (!total) total = +(r.headers.get('Content-Length') || 0) + n;
+      const leitor = r.body.getReader();
+      for (;;) {
+        clearTimeout(vigia); vigia = setTimeout(() => ctl.abort(), 20000);
+        const { done, value } = await leitor.read();
+        if (done) break;
+        partes.push(value); n += value.length;
+        if (aoProgresso) aoProgresso(n, total);
+      }
+      clearTimeout(vigia);
+      ultimoErro = null;
+      break;
+    } catch (e) {
+      clearTimeout(vigia);
+      ultimoErro = e;
+      if (/HTTP 4\d\d/.test(e.message)) break;
+      await new Promise((ok) => setTimeout(ok, 1500 * (tentativa + 1)));
+    }
   }
+  if (ultimoErro) throw new Error(ultimoErro.name === 'AbortError' ? 'a conexão travou durante o download' : /fetch/i.test(ultimoErro.message) ? 'sem conexão com o servidor das vozes' : ultimoErro.message);
   const buf = new Uint8Array(n);
   let o = 0;
   for (const p of partes) { buf.set(p, o); o += p.length; }
