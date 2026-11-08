@@ -184,7 +184,7 @@ function show(v,manter){
   const y=window.scrollY;atual=v;
   const app=!!S&&(ABAS.includes(v)||v==='calistenia');
   $('#nav').hidden=!app;$('#bhome').hidden=!S||v==='inicio';
-  $('#titulo').textContent=S&&v!=='inicio'&&v!=='novo'?`Treinos de ${primeiro(S.perfil&&S.perfil.nome||contas[contaId]&&contas[contaId].nome)}`:'Ryke Treinos';
+  $('#titulo').textContent=S&&v!=='inicio'&&v!=='novo'?`de ${primeiro(S.perfil&&S.perfil.nome||contas[contaId]&&contas[contaId].nome)}`:'';
   $('#semchip').textContent=app&&S.plano&&diasPlano().length?`Semana ${Math.min(semana(),8)} de 8`:'';
   $('#sync').hidden=!S||!app;
   document.querySelectorAll('#nav a').forEach(a=>a.setAttribute('aria-current',a.dataset.n===v||(v==='calistenia'&&a.dataset.n==='treino')));
@@ -244,9 +244,9 @@ function telaInicio(){
   const atualC=S&&contas[contaId];
   let h=`<section class="capa" aria-label="Ryke Treinos"><div class="fotos">${FOTOS.map((f,i)=>`<i class="${i===capaI%FOTOS.length?'on':''}" style="background-image:url(img/fundo/${f})"></i>`).join('')}</div><div class="veu"></div>
   <div class="capa-in"><div class="logo"><img src="img/icon-192.png" alt="" width="42" height="42"><span class="marca">Ryke Sistemas</span></div>
-  <h2>Treinos</h2><p class="frase" id="frase">${FRASES[capaI%FRASES.length]}</p>
+  <h2 class="logocapa"><img src="img/logo-treinos.webp" alt="Treinos" width="900" height="454"></h2><p class="frase" id="frase">${FRASES[capaI%FRASES.length]}</p>
   <p class="desc">Treino montado por uma IA que roda no seu celular, com coach para treino e alimentação.</p>
-  <div class="selos"><span>${svg('ia')} IA no aparelho</span><span>${svg('halter')} 97 exercícios animados</span><span>${svg('prato')} Cardápios na sua meta</span></div></div></section>
+  <div class="selos"><span>${svg('ia')} IA no aparelho</span><span>${svg('halter')} ${EX_IDS.length} exercícios animados</span><span>${svg('prato')} Cardápios na sua meta</span></div></div></section>
   <div class="sobe">`;
   if(atualC&&!ehHenrique(atualC.nome))h+=`<button class="destaque" type="button" data-act="continuar">${avatar(atualC.nome)}<span><b>Continuar</b><small>Treinos de ${esc(atualC.nome)}</small></span><span class="seta">›</span></button>`;
   h+=`<button class="destaque" type="button" data-act="henrique">${avatar('Henrique')}<span><b>Treinos de Henrique</b><small>Peito, costas, ombros e braços, de segunda a sexta</small></span><span class="seta">›</span></button>`;
