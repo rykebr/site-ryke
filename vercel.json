@@ -1,6 +1,7 @@
 {
   "trailingSlash": true,
   "rewrites": [
+    { "source": "/leitucast/gutenberg/:path*/", "destination": "https://www.gutenberg.org/:path*/" },
     { "source": "/leitucast/gutenberg/:path*", "destination": "https://www.gutenberg.org/:path*" },
     { "source": "/leitucast/wikisource", "destination": "https://ws-export.wmcloud.org/" },
     { "source": "/leitucast/wikisource/", "destination": "https://ws-export.wmcloud.org/" },
