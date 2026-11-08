@@ -15,6 +15,12 @@ const Narrador = (() => {
   };
   const VOZES_ABERTAS = [
     piper('pt_BR', 'faber', 'medium', { nome: 'Faber', genero: 'm', desc: 'Masculina, clara e calma. A mais natural em português.', recomendada: true }),
+    // Dii (OpenVoiceOS): voz feminina neural em português do Brasil, no formato Piper. Licença de uso pessoal.
+    {
+      id: 'piper:pt_BR-dii-ovos', motor: 'piper', lang: 'pt-BR', nome: 'Dii', genero: 'f', desc: 'Feminina, suave e clara. Uso pessoal, não comercial.', recomendada: true,
+      onnx: 'https://huggingface.co/OpenVoiceOS/pipertts_pt-BR_dii/resolve/main/dii_pt-BR.onnx', cfg: 'https://huggingface.co/OpenVoiceOS/pipertts_pt-BR_dii/resolve/main/dii_pt-BR.onnx.json',
+      amostra: 'https://huggingface.co/OpenVoiceOS/pipertts_pt-BR_dii/resolve/main/sample.wav', mb: 63, lic: 'CC BY-NC-ND 4.0 (OpenVoiceOS / TigreGotico)',
+    },
     piper('pt_BR', 'cadu', 'medium', { nome: 'Cadu', genero: 'm', desc: 'Masculina, jovem e próxima' }),
     piper('pt_BR', 'jeff', 'medium', { nome: 'Jeff', genero: 'm', desc: 'Masculina, firme, boa para suspense' }),
     piper('pt_BR', 'edresson', 'low', { nome: 'Edresson', genero: 'm', desc: 'Masculina, simples e leve' }),
@@ -111,7 +117,7 @@ const Narrador = (() => {
   /* ---------------- worker Piper ---------------- */
   function chamar(tipo, dados, aoProg) {
     if (!worker) {
-      worker = new Worker(new URL('js/voz-piper.js?v=5', location.href).href);
+      worker = new Worker(new URL('js/voz-piper.js?v=6', location.href).href);
       worker.onmessage = (e) => {
         const p = pedidos.get(e.data.id);
         if (!p) return;
