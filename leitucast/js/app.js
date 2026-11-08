@@ -1635,9 +1635,15 @@
     $('#diInst').onclick = instalar;
     $('#diFechar').onclick = () => { LS.set('lc-dica-inst-off', 1); el.innerHTML = ''; };
   }
+  addEventListener('appinstalled', () => toast('LeituCast instalado! Procure o ícone na tela inicial ou na lista de apps.', 5000));
   async function instalar() {
     if (instalado()) return toast('O LeituCast já está instalado neste aparelho.');
-    if (pedidoInstalar) { pedidoInstalar.prompt(); const r = await pedidoInstalar.userChoice.catch(() => null); if (r && r.outcome === 'accepted') toast('Instalado!'); pedidoInstalar = null; return; }
+    if (pedidoInstalar) { pedidoInstalar.prompt(); const r = await pedidoInstalar.userChoice.catch(() => null); if (r && r.outcome === 'accepted') toast('Instalando… o ícone do LeituCast aparece na tela inicial em alguns segundos.', 5000); pedidoInstalar = null; return; }
+    if (/android/i.test(navigator.userAgent)) return abrirFolha(`<h2>Instalar no Android</h2><ol style="line-height:1.8;color:var(--tx2);padding-left:20px">
+      <li>No <b>Chrome</b>, toque no menu <b>⋮</b> e escolha <b>Instalar app</b> (ou <b>Adicionar à tela inicial</b> e depois <b>Instalar</b>).</li>
+      <li>Se aparecer <b>“já instalado”</b> sem ícone, ou <b>“não foi possível instalar”</b>: no Chrome, toque em <b>⋮ › Configurações › Configurações do site › Todos os sites › rykesistemas.com.br › Limpar e redefinir</b>. Feche o Chrome, abra o site de novo e instale.</li>
+      <li>Se ainda assim o Android recusar, use <b>⋮ › Adicionar à tela inicial › Criar atalho</b>: o ícone abre o LeituCast do mesmo jeito.</li></ol>
+      <p style="color:var(--tx2);font-size:13px">Atenção: limpar os dados do site apaga deste aparelho os livros baixados e os ebooks que você importou. Perfil, estante e progresso voltam quando você entra de novo, se a conta estiver salva na nuvem (Perfil › Salvar na nuvem).</p>`);
     if (ehIOS()) return abrirFolha(`<h2>Instalar no iPhone ou iPad</h2><ol style="line-height:1.9;color:var(--tx2)"><li>Abra este site no <b>Safari</b>.</li><li>Toque em <b>Compartilhar</b> (o quadrado com a seta para cima).</li><li>Escolha <b>Adicionar à Tela de Início</b>.</li><li>Toque em <b>Adicionar</b>. Pronto!</li></ol>`);
     abrirFolha(`<h2>Instalar o app</h2><p style="color:var(--tx2);line-height:1.7">No Chrome ou no Edge, abra o menu (⋮ ou …) e escolha <b>Instalar LeituCast</b> ou <b>Adicionar à tela inicial</b>. No computador também aparece um ícone de instalar na barra de endereço.</p>`);
   }
