@@ -673,7 +673,7 @@ function atualizaLib(){const l=$('#liblista');if(l){l.innerHTML=bibliotecaLista(
 
 /* ================= Tela: Coach IA (chat) ================= */
 let chatCtx={};
-const SUGS_INI=['Monte meu cardápio de hoje','O que comer antes do treino?','Quanta proteína tem 3 ovos?','Creatina funciona?','Como fazer o agachamento?','Quero treinar 4 dias'];
+const SUGS_INI=['Monte meu cardápio de hoje','Frango ou ovo, qual tem mais proteína?','Quanto peguei no supino?','Em quanto tempo perco 5 kg?','Quantas calorias gasto correndo 30 min?','Na sexta só bíceps','Creatina funciona?','Como fazer o agachamento?'];
 function volumeFeito(){
   const ini=inicioSemana(new Date()),v={};GRUPO_IDS.forEach(g=>v[g]=0);
   const conta=(id,n)=>{const e=EXS[id];if(!e)return;const vis=new Set();e.p.forEach(m=>{const g=MUSC_GRUPO[m];if(!vis.has(g)){v[g]+=n;vis.add(g);}});e.sec.forEach(m=>{const g=MUSC_GRUPO[m];if(!vis.has(g)){v[g]+=n/2;vis.add(g);}});};
@@ -684,7 +684,7 @@ function volumeFeito(){
 const chatMsgs=()=>(S.ia.chat=S.ia.chat||[]);
 function telaCoach(){
   const p=S.perfil,msgs=chatMsgs();
-  const boas={ia:1,t:`Oi, ${primeiro(p.nome)}! Sou o seu Coach IA. Posso montar cardápios com as suas metas, dizer quanto de proteína e calorias tem cada alimento, explicar exercícios e ajustar o seu plano. Pergunte o que quiser.`,sugs:SUGS_INI};
+  const boas={ia:1,t:`Oi, ${primeiro(p.nome)}! Sou o seu Coach IA. Monto cardápios nas suas metas, comparo alimentos, calculo gasto de atividades, carga máxima e prazos de peso, mostro a evolução das suas cargas, explico exercícios e mudo o seu plano na hora. Pergunte o que quiser sobre treino, dieta e saúde.`,sugs:SUGS_INI};
   return `<div class="chatwrap"><div class="chat-top"><span class="bot">${svg('ia')}</span><div><b>Coach IA</b><small>${navigator.onLine?'Roda no seu aparelho':'Sem internet, funcionando normal'}</small></div>
     <button class="mini" type="button" data-act="painel">${svg('grafico')} Seus números</button>${msgs.length?`<button class="mini" type="button" data-act="limparchat" aria-label="Limpar conversa">Limpar</button>`:''}</div>
   <div class="chat" id="chat" aria-live="polite">${[boas,...msgs].map((m,i,arr)=>msgHTML(m,i===arr.length-1)).join('')}</div>
@@ -707,7 +707,7 @@ function msgHTML(m,ultima){
 }
 function desenhaChat(digitando){
   const ch=$('#chat');if(!ch)return;
-  const p=S.perfil,msgs=chatMsgs(),boas={ia:1,t:`Oi, ${primeiro(p.nome)}! Sou o seu Coach IA. Posso montar cardápios com as suas metas, dizer quanto de proteína e calorias tem cada alimento, explicar exercícios e ajustar o seu plano. Pergunte o que quiser.`,sugs:SUGS_INI};
+  const p=S.perfil,msgs=chatMsgs(),boas={ia:1,t:`Oi, ${primeiro(p.nome)}! Sou o seu Coach IA. Monto cardápios nas suas metas, comparo alimentos, calculo gasto de atividades, carga máxima e prazos de peso, mostro a evolução das suas cargas, explico exercícios e mudo o seu plano na hora. Pergunte o que quiser sobre treino, dieta e saúde.`,sugs:SUGS_INI};
   ch.innerHTML=[boas,...msgs].map((m,i,arr)=>msgHTML(m,!digitando&&i===arr.length-1)).join('')+(digitando?'<div class="msg ia digitando" aria-label="Coach digitando"><i></i><i></i><i></i></div>':'');
   observar();ch.scrollTop=ch.scrollHeight;
 }

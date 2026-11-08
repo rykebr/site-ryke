@@ -421,8 +421,11 @@ const IA=(()=>{
   const raiz=w=>w.length>4?w.replace(/(oes|aes|ais|eis|ns|s)$/,''):w;
   const toks=s=>norm(s).split(' ').filter(w=>w&&!STOP.has(w)).map(raiz);
   let idx=null;
+  /* palavras que aparecem em perguntas de qualquer tema e não dizem qual é o assunto */
+  const GENERICO=new Set('funciona funcionam ajuda ajudam ajudar vale valem pena serve servem atrapalha atrapalham atrapalhar mal bom boa ruim normal certo certa existe problema usar melhora melhorar pior maior menor bem algo ficar fica deixa deixar agora hoje dia dias vez sempre ainda ja da dar pra pro e'.split(' ').map(raiz));
+  const toksKB=s=>toks(s).filter(w=>!GENERICO.has(w));
   function indexar(){
-    idx=(window.CONHECIMENTO||[]).map(k=>({k,t:new Set(k.k.flatMap(x=>toks(x)))}));
+    idx=(window.CONHECIMENTO||[]).map(k=>({k,t:new Set([...k.k.flatMap(x=>toksKB(x)),...toksKB(k.q)])}));
     const df={};idx.forEach(e=>e.t.forEach(w=>df[w]=(df[w]||0)+1));
     idx.forEach(e=>e.idf=w=>Math.log(1+idx.length/(df[w]||1)));
   }
@@ -439,27 +442,35 @@ const IA=(()=>{
     }
     return null;
   }
+  /* busca na base de conhecimento: soma a raridade das palavras em comum e dá bônus para frases-chave inteiras */
+  function buscaKB(q,dois){
+    if(!idx)indexar();
+    const n=norm(q),qt=[...new Set(toksKB(q))];let best=null,seg=null;
+    idx.forEach(e=>{let s=0;qt.forEach(w=>{if(e.t.has(w))s+=e.idf(w);});
+      const fl=(e.k.frase||[]).filter(f=>n.includes(norm(f))).reduce((m,f)=>Math.max(m,norm(f).split(' ').length),0),fr=fl>0;if(fr)s+=3+.4*fl;
+      const o={e,s,frase:fr};
+      if(!best||s>best.s){seg=best;best=o;}else if(!seg||s>seg.s)seg=o;});
+    return dois?{best,seg}:(best&&best.s>=1.2?best:null);
+  }
   function responder(q,S){
     if(!idx)indexar();
     const cmd=comando(q,S);if(cmd)return cmd;
     const n=norm(q),p=S&&S.perfil||{},cc=S&&S.perfil?calc(p,S.ia&&S.ia.ajKcal):null;
     const tem=re=>re.test(n);
     /* perguntas sobre os próprios números */
-    if(cc&&tem(/\b(caloria|calorias|kcal|quanto (devo )?comer|dieta)\b/))return{txt:`Pelo seu perfil, ${cc.kcal.toLocaleString('pt-BR')} kcal por dia, com ${cc.prot} g de proteína, ${cc.carb} g de carboidrato e ${cc.gord} g de gordura. Seu gasto estimado é de ${cc.gasto.toLocaleString('pt-BR')} kcal. Meta de ritmo: ${cc.ritmo}. Ajuste pela balança a cada 2 semanas.`};
+    const simNao=tem(/\b(atrapalha|atrapalham|funciona|funcionam|faz mal|engorda|vale a pena|e verdade|e ruim|emagrece|ajuda)\b/);
+    if(cc&&!simNao&&tem(/\b(caloria|calorias|kcal|quanto (devo )?comer|dieta)\b/))return{txt:`Pelo seu perfil, ${cc.kcal.toLocaleString('pt-BR')} kcal por dia, com ${cc.prot} g de proteína, ${cc.carb} g de carboidrato e ${cc.gord} g de gordura. Seu gasto estimado é de ${cc.gasto.toLocaleString('pt-BR')} kcal. Meta de ritmo: ${cc.ritmo}. Ajuste pela balança a cada 2 semanas.`};
     if(cc&&tem(/\bproteina/)&&tem(/\b(quanto|quantas|quantos|meta|preciso|devo)\b/))return{txt:`Sua meta é de ${cc.prot} g de proteína por dia, dividida em 3 a 5 refeições. Boas fontes: ovos, frango, carne, peixe, leite, iogurte, queijo, feijão e whey se precisar completar.`};
     if(cc&&tem(/\b(agua|hidrat)/))return{txt:`Uns ${String(cc.agua).replace('.',',')} litros de água por dia para o seu peso, mais um pouco nos dias de treino e calor. Urina clara é um bom sinal.`};
     if(cc&&tem(/\b(imc|peso ideal)\b/))return{txt:`Seu IMC é ${fmtKg(cc.imc)}, ${cc.imcTxt}. Para sua altura, a faixa considerada saudável vai de ${cc.pesoMin} a ${cc.pesoMax} kg. O IMC não diferencia músculo de gordura, então a cintura e o espelho contam muito.`};
-    if(S&&S.plano&&tem(/\b(treino de hoje|treino hoje|hoje)\b/)){const d=new Date().getDay(),t=S.plano.dias[d];
+    if(S&&S.plano&&(tem(/\btreino de hoje\b/)||tem(/\b(qual|o que|que|mostra)\b/)&&tem(/\bhoje\b/)&&tem(/\b(trein|exercicio|malh)/))){const d=new Date().getDay(),t=S.plano.dias[d];
       return{txt:t?`Hoje é ${t.nome.toLowerCase()}: ${lista(t.ex.map(it=>EXS[it.id].n))}.`:'Hoje é dia de descanso no seu plano. Aproveite para dormir bem e comer direito.'};}
     /* exercício específico */
     const exId=acharExercicio(q);
     if(exId&&!tem(/\b(substitu|trocar|alternativa)/)){const e=EXS[exId];return{txt:`${e.n}: ${e.dica} Trabalha ${lista(e.p.map(m=>NOMES[m].toLowerCase()))}${e.sec.length?`, com ajuda de ${lista(e.sec.map(m=>NOMES[m].toLowerCase()))}`:''}.`,ex:exId};}
     if(exId){const a=alternativas(exId,e=>serve(e,p)).slice(0,3);return{txt:`Boas alternativas para ${EXS[exId].n}: ${lista(a.map(x=>EXS[x].n))}. Dá para trocar direto no treino, no botão Trocar.`,ex:exId};}
     /* base de conhecimento */
-    const qt=toks(q);let best=null,seg=null;
-    idx.forEach(e=>{let s=0;qt.forEach(w=>{if(e.t.has(w))s+=e.idf(w);});
-      if(e.k.frase&&e.k.frase.some(f=>n.includes(norm(f))))s+=3;
-      if(!best||s>best.s){seg=best;best={e,s};}else if(!seg||s>seg.s)seg={e,s};});
+    const{best,seg}=buscaKB(q,true);
     if(best&&best.s>=1.2){let txt=best.e.k.r;if(typeof txt==='function')txt=txt(p,cc);return{txt,tema:best.e.k.q,rel:seg&&seg.s>=1.2?seg.e.k.q:null};}
     return{txt:'Ainda não sei responder isso. Pergunte sobre treino, descanso, alimentação, suplementos, dor, progressão de carga ou sobre um exercício pelo nome.',nada:true};
   }
@@ -536,7 +547,7 @@ const IA=(()=>{
     }
 
     const mMin=n.match(/\b(\d{2,3})\s*(min|minutos)\b/);
-    if(mMin&&/\b(tenho|so|apenas|treino|tempo|ter)\b/.test(n)){const v=Math.max(20,Math.min(120,+mMin[1]));
+    if(mMin&&/\b(tenho|so|apenas|treino|tempo|ter)\b/.test(n)&&!/\b(funciona|funcionam|adianta|vale a pena|da resultado|serve|e suficiente|basta)\b/.test(n)){const v=Math.max(20,Math.min(120,+mMin[1]));
       if(relativo)return{txt:`Se for só hoje, faça os primeiros exercícios e pule os isolados do fim. Quer que todos os treinos caibam em ${v} min?`,acoes:[{lab:`Refazer para ${v} min`,cmd:{tipo:'tempo',v},sim:1}]};
       return{txt:'',fazer:{tipo:'tempo',v}};}
     if(/\b(mais curto|menos tempo|treino longo|muito longo|demora muito)\b/.test(n)){const v=Math.max(20,(+p.tempo||45)-15);return{txt:'',fazer:{tipo:'tempo',v}};}
@@ -587,5 +598,5 @@ const IA=(()=>{
     return{nome:nomeDia([...new Set(ex.map(it=>EXS[it.id].g))]),ex,novos:novos.map(it=>it.id)};
   }
 
-  return{calc,gerar,comando,montarDia,naDia,analisar,insights,responder,sugestao,fase,prescricao,serve,eqOk,estimaMin,volumePlano,faixa,nomeDia,alvos,OBJ,NIVEL,LOCAL,DIAS,DIAS_C,ORDEM_SEMANA,PADRAO,lista,fmtKg,uidl};
+  return{calc,gerar,comando,montarDia,naDia,buscaKB,acharExercicio,analisar,insights,responder,sugestao,fase,prescricao,serve,eqOk,estimaMin,volumePlano,faixa,nomeDia,alvos,OBJ,NIVEL,LOCAL,DIAS,DIAS_C,ORDEM_SEMANA,PADRAO,lista,fmtKg,uidl};
 })();
