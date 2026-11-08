@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14111D" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F7F2E9" media="(prefers-color-scheme: light)">
+<meta name="description" content="LeituCast Ingrid: leia e ouça livros com uma IA que encontra clássicos gratuitos do seu gosto, folheie como um livro de verdade e importe seus próprios ebooks.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LeituCast">
+<meta property="og:title" content="LeituCast Ingrid">
+<meta property="og:description" content="Leia e ouça livros, com uma IA que encontra clássicos gratuitos do seu gosto.">
+<meta property="og:image" content="img/og.jpg">
+<title>LeituCast Ingrid</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="img/icon-192.png">
+<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="preload" href="fontes/manrope-normal-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fontes/fraunces-normal-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/fontes.css">
+<link rel="stylesheet" href="css/app.css?v=2">
+</head>
+<body>
+<div id="app" class="app">
+  <aside class="lateral" id="lateral" hidden>
+    <a class="marca" href="#inicio" aria-label="LeituCast Ingrid, início"><img src="img/logo.svg" alt="" width="34" height="34"><span>LeituCast<small>Ingrid</small></span></a>
+    <nav class="nav-lat" aria-label="Seções"></nav>
+  </aside>
+  <main id="tela" class="tela" tabindex="-1"><div class="carregando"><img src="img/logo.svg" alt="" width="64" height="64"><span>Abrindo a biblioteca…</span></div></main>
+  <nav class="nav" id="nav" aria-label="Seções" hidden></nav>
+</div>
+<section class="leitor" id="leitor" hidden aria-label="Leitura"></section>
+<div class="folhas" id="folhas"></div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<input type="file" id="arquivos" multiple hidden accept=".epub,.pdf,.txt,.fb2,.docx,.html,.htm,.xhtml,.md,.mobi,.azw,.azw3,application/epub+zip,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+<noscript>O LeituCast precisa de JavaScript ligado para funcionar.</noscript>
+<script src="vendor/jszip.min.js" defer></script>
+<script src="js/util.js?v=2" defer></script>
+<script src="js/conhecimento.js?v=2" defer></script>
+<script src="js/saber.js?v=2" defer></script>
+<script src="js/ia-pesos.js?v=2" defer></script>
+<script src="js/fontes.js?v=2" defer></script>
+<script src="js/ia.js?v=2" defer></script>
+<script src="js/formatos.js?v=2" defer></script>
+<script src="js/leitor.js?v=2" defer></script>
+<script src="js/narrador.js?v=2" defer></script>
+<script src="js/cerebro.js?v=2" defer></script>
+<script src="js/infantil.js?v=2" defer></script>
+<script src="js/nuvem.js?v=2" defer></script>
+<script src="js/app.js?v=2" defer></script>
+</body>
+</html>
