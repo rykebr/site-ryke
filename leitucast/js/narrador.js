@@ -111,7 +111,7 @@ const Narrador = (() => {
   /* ---------------- worker Piper ---------------- */
   function chamar(tipo, dados, aoProg) {
     if (!worker) {
-      worker = new Worker(new URL('js/voz-piper.js?v=4', location.href).href);
+      worker = new Worker(new URL('js/voz-piper.js?v=5', location.href).href);
       worker.onmessage = (e) => {
         const p = pedidos.get(e.data.id);
         if (!p) return;

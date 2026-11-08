@@ -44,7 +44,7 @@ const Leitor = (() => {
       <div class="lt-palco" id="ltPalco">
         <div class="lt-livro" id="ltLivro">
           <div class="lt-borda-paginas"></div>
-          <div class="lt-folha" id="ltFolha" hidden><div class="lt-face lt-frente"></div><div class="lt-face lt-verso"></div><div class="lt-luz"></div></div>
+          <div class="lt-folha" id="ltFolha" hidden><div class="lt-face lt-frente"><div class="lt-tom"></div></div><div class="lt-face lt-verso"><div class="lt-tom"></div></div><div class="lt-luz"></div></div>
           <div class="lt-sombra" id="ltSombra" hidden></div>
           <div class="lt-lombada"></div>
         </div>
@@ -254,14 +254,16 @@ const Leitor = (() => {
   /* ================= virada de página ================= */
   const easing = (t) => 1 - Math.pow(1 - t, 3);
   const suave = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  /* a cada quadro só mudam transform e opacity (feitos pela placa de vídeo, sem redesenhar o texto) */
+  let fx = null;
   function ajustarFolha(ang, dir) {
-    const folha = $('#ltFolha', raiz), sombra = $('#ltSombra', raiz);
-    folha.style.transform = `rotateY(${ang}deg)`;
-    const k = Math.sin((Math.abs(ang) * Math.PI) / 180);
-    folha.style.setProperty('--k', k.toFixed(3));
+    if (!fx || !fx.folha.isConnected) fx = { folha: $('#ltFolha', raiz), sombra: $('#ltSombra', raiz), tons: $$('.lt-tom', raiz) };
+    fx.folha.style.transform = `rotateY(${ang.toFixed(2)}deg)`;
+    const k = Math.sin((Math.abs(ang) * Math.PI) / 180).toFixed(3);
     const p = Math.abs(ang) / 180;
-    sombra.style.setProperty('--p', p.toFixed(3));
-    sombra.style.setProperty('--k', k.toFixed(3));
+    for (const t of fx.tons) t.style.opacity = k;
+    fx.sombra.style.opacity = k;
+    fx.sombra.style.transform = `scaleX(${(0.3 + p * 0.5).toFixed(3)})`;
   }
   async function prepararFolha(dir, alvo) {
     const folha = $('#ltFolha', raiz), sombra = $('#ltSombra', raiz);
