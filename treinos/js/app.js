@@ -17,7 +17,7 @@ const iniciais=n=>String(n||'?').trim().split(/\s+/).filter(Boolean).slice(0,2).
 const primeiro=n=>String(n||'').trim().split(/\s+/)[0]||'';
 const CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 const DIAS=IA.DIAS,DC=IA.DIAS_C,OS=IA.ORDEM_SEMANA;
-const ICO={alvo:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
+const ICO={barra:'<path d="M3 4h18M8 4v5M16 4v5"/><circle cx="12" cy="8.5" r="2"/><path d="M8 9c1.6 2.2 6.4 2.2 8 0M12 11v6M9 21l3-4 3 4"/>',alvo:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
   chama:'<path d="M12 3c.8 3.6 5 5.2 5 10a5 5 0 0 1-10 0c0-2.6 1.6-3.8 2.2-5.4.9 1.4 1.7 2 2.6 2.1-.9-2.8-.4-4.8.2-6.7z"/>',
   brilho:'<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
   halter:'<path d="M3 10v4M6 7v10M18 7v10M21 10v4M6 12h12"/>',coracao:'<path d="M12 20s-7.5-4.6-7.5-10.2A4.2 4.2 0 0 1 12 7.2a4.2 4.2 0 0 1 7.5 2.6C19.5 15.4 12 20 12 20z"/>',
@@ -182,12 +182,12 @@ function show(v,manter){
   if(v!=='inicio'&&v!=='novo'&&!S)v='inicio';
   if(S&&!S.perfil&&v!=='inicio'&&v!=='novo'){if(!OB||OB.modo!=='completar')OB=obNovo('completar');v='novo';}
   const y=window.scrollY;atual=v;
-  const app=!!S&&ABAS.includes(v);
+  const app=!!S&&(ABAS.includes(v)||v==='calistenia');
   $('#nav').hidden=!app;$('#bhome').hidden=!S||v==='inicio';
   $('#titulo').textContent=S&&v!=='inicio'&&v!=='novo'?`Treinos de ${primeiro(S.perfil&&S.perfil.nome||contas[contaId]&&contas[contaId].nome)}`:'Ryke Treinos';
   $('#semchip').textContent=app&&S.plano&&diasPlano().length?`Semana ${Math.min(semana(),8)} de 8`:'';
   $('#sync').hidden=!S||!app;
-  document.querySelectorAll('#nav a').forEach(a=>a.setAttribute('aria-current',a.dataset.n===v));
+  document.querySelectorAll('#nav a').forEach(a=>a.setAttribute('aria-current',a.dataset.n===v||(v==='calistenia'&&a.dataset.n==='treino')));
   const m=$('#main');
   if(v!==ultimaTela){m.classList.remove('entra');void m.offsetWidth;m.classList.add('entra');ultimaTela=v;}else m.classList.remove('entra');
   document.body.classList.toggle('na-capa',v==='inicio');document.body.classList.toggle('no-chat',v==='coach');
@@ -199,6 +199,7 @@ function show(v,manter){
     else if(v==='coach')m.innerHTML=telaCoach();
     else if(v==='evolucao')m.innerHTML=telaEvolucao();
     else if(v==='perfil')m.innerHTML=telaPerfil();
+    else if(v==='calistenia')m.innerHTML=telaCalistenia();
     else if(v==='editar')m.innerHTML=telaEditar();
   }catch(e){console.error(e);m.innerHTML=`<div class="card"><h3>Algo deu errado</h3><p>${esc(e.message)}</p><button class="btn" data-act="ir" data-v="treino">Voltar</button></div>`;}
   window.scrollTo(0,manter?y:0);
@@ -207,7 +208,7 @@ function show(v,manter){
   observar();atualizaBarra();setSync(syncEst);
 }
 function ir(v){if(location.hash.slice(1)===v)show(v);else location.hash=v;}
-window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h==='editar'&&S)return show('editar');show(ABAS.includes(h)||h==='novo'||h==='inicio'?h:(S?'treino':'inicio'));});
+window.addEventListener('hashchange',()=>{const h=location.hash.slice(1);if(h==='editar'&&S)return show('editar');show(ABAS.includes(h)||h==='novo'||h==='inicio'||h==='calistenia'?h:(S?'treino':'inicio'));});
 
 /* ================= Instalar como app ================= */
 let instalarEvt=null;
@@ -361,7 +362,7 @@ let OB=null;
 function obNovo(modo='novo'){
   return{passo:0,modo,erro:'',d:{nome:'',senha:'',sexo:'',idade:'',altura:'',peso:'',objetivo:'',nivel:'',parado:false,dias:[1,3,5],tempo:45,local:'academia',barra:false,foco:[],somente:false,evitar:[],lesoes:[],montar:'ia'}};
 }
-const ICO_OPC={objetivo:{massa:'halter',emagrecer:'chama',definir:'brilho',forca:'alvo',saude:'coracao'},nivel:{ini:'n1',inter:'n2',avan:'n3'},local:{academia:'predio',casa_halteres:'casa',casa_corpo:'corpo'},montar:{ia:'ia',manual:'mao'}};
+const ICO_OPC={objetivo:{massa:'halter',emagrecer:'chama',definir:'brilho',forca:'alvo',saude:'coracao'},nivel:{ini:'n1',inter:'n2',avan:'n3'},local:{academia:'predio',casa_halteres:'casa',casa_corpo:'corpo',calistenia:'barra'},montar:{ia:'ia',manual:'mao'}};
 const OPC=(k,v,tit,sub,on)=>{const ic=ICO_OPC[k]&&ICO_OPC[k][v];return `<button class="opcao" type="button" data-act="ob" data-k="${k}" data-v="${v}" aria-pressed="${!!on}">${ic?`<span class="oico">${svg(ic)}</span>`:''}<b>${tit}</b>${sub?`<small>${sub}</small>`:''}</button>`;};
 const CHX=(k,v,tit,on,cls='')=>`<button class="chipx ${cls}" type="button" data-act="obl" data-k="${k}" data-v="${v}" aria-pressed="${!!on}">${tit}</button>`;
 const PASSOS=[
@@ -399,8 +400,9 @@ const PASSOS=[
   {id:'local',r:d=>`<h2 class="pergunta">Onde você treina?</h2><div class="opcoes">
     ${OPC('local','academia','Academia','Barras, halteres, máquinas e polias',d.local==='academia')}
     ${OPC('local','casa_halteres','Em casa com halteres','Halteres e, se tiver, um banco',d.local==='casa_halteres')}
-    ${OPC('local','casa_corpo','Em casa sem equipamento','Só o peso do corpo e objetos da casa',d.local==='casa_corpo')}</div>
-    ${d.local!=='academia'?`<label class="toggle"><input type="checkbox" data-obc="barra"${d.barra?' checked':''}> Tenho uma barra fixa</label>`:''}`,
+    ${OPC('local','casa_corpo','Em casa sem equipamento','Só o peso do corpo e objetos da casa',d.local==='casa_corpo')}
+    ${OPC('local','calistenia','Calistenia','Barra fixa, paralelas e peso do corpo, na praça ou em casa',d.local==='calistenia')}</div>
+    ${d.local&&d.local.startsWith('casa')?`<label class="toggle"><input type="checkbox" data-obc="barra"${d.barra?' checked':''}> Tenho uma barra fixa</label>`:''}`,
    v:d=>d.local?'':'Escolha onde treina.'},
   {id:'musculos',r:d=>`<h2 class="pergunta">Quais partes do corpo?</h2><p class="sub">Opcional. Sem escolher nada, a IA monta um treino equilibrado para o corpo todo.</p>
     <p class="subt">Quero mais foco em</p><div class="chipsx">${GRUPO_IDS.map(g=>CHX('foco',g,GRUPOS[g].n,d.foco.includes(g))).join('')}</div>
@@ -424,7 +426,7 @@ function telaNovo(){
 }
 function perfilDe(d){
   return{nome:d.nome.trim().replace(/\s+/g,' '),sexo:d.sexo==='x'?'':d.sexo,idade:Math.round(num(d.idade)),altura:Math.round(num(d.altura)),peso:num(d.peso),objetivo:d.objetivo,nivel:d.nivel,parado:!!d.parado,
-    dias:d.dias.slice().sort((a,b)=>OS.indexOf(a)-OS.indexOf(b)),tempo:+d.tempo||45,local:d.local,barra:d.local!=='academia'&&!!d.barra,foco:d.foco.slice(),somente:!!d.somente&&d.foco.length>0,evitar:d.evitar.slice(),lesoes:d.lesoes.slice(),desc:d.desc||null};
+    dias:d.dias.slice().sort((a,b)=>OS.indexOf(a)-OS.indexOf(b)),tempo:+d.tempo||45,local:d.local,barra:d.local==='calistenia'||(d.local!=='academia'&&!!d.barra),foco:d.foco.slice(),somente:!!d.somente&&d.foco.length>0,evitar:d.evitar.slice(),lesoes:d.lesoes.slice(),desc:d.desc||null};
 }
 function planoVazio(dias){const p={origem:'manual',criado:Date.now(),dias:{}};dias.forEach(d=>p.dias[d]={nome:'Treino de '+DIAS[d].toLowerCase(),ex:[]});return p;}
 async function obAvancar(){
@@ -483,8 +485,42 @@ function telaVisao(d){
     D.ex.forEach((it,i)=>{const e=EXS[it.id];h+=`<div class="previa"><div class="art">${poseSVG(it.id)}</div><div><h4>${i+1}. ${esc(e.n)}</h4><p><span class="num">${it.s} × ${repsTxt(it)}</span>, descanso ${it.desc} s</p>${it.obs?`<p class="obs">${esc(it.obs)}</p>`:''}<p>${e.p.map(m=>NOMES[m]).join(', ')}</p></div><div>${mapSVG(e.p,e.sec)}</div></div>`;});
     h+=`<div class="acoes" style="margin-top:10px"><button class="btn" type="button" data-act="editardia" data-d="${d}">Editar este treino</button></div></div>`;
   }
+  return h+cartaoCal();
+}
+/* ================= Calistenia ================= */
+let calTrilha='empurrar';
+const nivelCal=id=>['','Básico','Intermediário','Avançado'][EXS[id].nv]||'';
+const doseCal=id=>{const e=EXS[id];return e.seg?`${e.rr||30} s`:`${e.rr||IA.PADRAO.r} repetições`;};
+function cartaoCal(){
+  const eh=S.perfil.local==='calistenia';
+  return `<button type="button" class="calcard" data-act="ircal"><span class="calico">${svg('barra')}</span><span><b>${eh?'Suas trilhas de calistenia':'Treino de calistenia'}</b><small>${eh?'Veja as progressões e o próximo passo de cada exercício.':'Prefere treinar com o peso do corpo? Veja os exercícios e monte seu treino.'}</small></span><span class="seta" aria-hidden="true">›</span></button>`;
+}
+function telaCalistenia(){
+  const p=S.perfil,eh=p.local==='calistenia',noPlano=new Set(Object.values(S.plano.dias).flatMap(D=>D.ex.map(it=>it.id)));
+  const T=TRILHAS_CAL.find(t=>t.id===calTrilha)||TRILHAS_CAL[0];
+  const volta=p.localAnt&&p.localAnt!=='calistenia'?p.localAnt:'academia';
+  let h=`<div class="calhero"><span class="calico">${svg('barra')}</span><div><h2 class="tit">Calistenia</h2><p class="sub">Treino com o peso do corpo, barra fixa e paralelas. Cada trilha vai do mais fácil ao mais difícil.</p></div></div>`;
+  h+=eh?`<div class="card calstatus ok"><h3>Seu plano é de calistenia</h3><p>A IA escolhe os passos das trilhas no seu nível e avisa no treino quando for hora de avançar.</p><div class="acoes"><button class="btn cheio" type="button" data-act="ir" data-v="treino">Ir para o treino</button><button class="btn" type="button" data-act="calsair">Voltar para ${volta==='academia'?'a academia':esc(IA.LOCAL[volta].toLowerCase())}</button></div></div>`
+    :`<div class="card calstatus"><h3>Prefere calistenia?</h3><p>A IA monta um plano só com peso do corpo, barra fixa e paralelas, no seu nível (${esc((IA.NIVEL[p.nivel]||'iniciante').toLowerCase())}), nos seus ${diasPlano().length||(p.dias||[]).length} dias de treino.</p><button class="btn cheio" type="button" data-act="calplano">Montar meu treino de calistenia</button></div>`;
+  h+=`<div class="abas calabas" role="tablist">${TRILHAS_CAL.map(t=>`<button type="button" data-act="caltrilha" data-t="${t.id}" aria-pressed="${t.id===T.id}">${t.n}</button>`).join('')}</div>`;
+  h+=`<p class="sub">${esc(T.d)}. ${T.ex.length} passos. Toque para ver como fazer.</p><ol class="trilha">${T.ex.map((id,i)=>{const e=EXS[id],eq=e.eq.filter(q=>q!=='corpo');
+    return `<li><button type="button" class="calpasso" data-act="calex" data-id="${id}"><span class="n">${i+1}</span><span class="art">${poseSVG(id)}</span><span class="txt"><b>${esc(e.n)}</b><small>${nivelCal(id)} · 3 × ${doseCal(id)}${eq.length?' · '+eq.map(q=>EQ_NOME[q]).join(' + '):''}</small>${noPlano.has(id)?'<em class="noplano">No seu plano</em>':''}</span></button></li>`;}).join('')}</ol>`;
+  h+=`<div class="card"><h3>Como progredir</h3><ul class="lista-ia"><li>Faça 3 séries perto da falha, com boa técnica.</li><li>Quando passar de 12 a 15 repetições fáceis, ou de 30 a 60 segundos nos exercícios parados, vá para o próximo passo.</li><li>Aqueça punhos, ombros e cotovelos antes das habilidades.</li><li>Dúvidas? Pergunte ao Coach, por exemplo: "como fazer a primeira barra?"</li></ul></div>`;
   return h;
 }
+function verCal(id){
+  const e=EXS[id],nx=proximaCal(id),ds=diasPlano();
+  abrirDlg(`<h3>${esc(e.n)}</h3><div class="calver"><div class="art">${poseSVG(id)}</div><div>${mapSVG(e.p,e.sec)}</div></div>
+  <p><span class="selo">${nivelCal(id)}</span> 3 × ${doseCal(id)} · ${e.eq.map(q=>EQ_NOME[q]).join(' + ')}</p>
+  <p class="dica">${esc(e.dica)}</p>${nx?`<p>Próximo passo: <button class="linkbtn" type="button" data-act="calex" data-id="${nx}">${esc(EXS[nx].n)}</button></p>`:''}
+  ${ds.length?`<p class="subt">Adicionar ao treino de</p><div class="diasadd">${ds.map(d=>{const tem=S.plano.dias[d].ex.some(x=>x.id===id);return `<button type="button" class="btn${tem?' ok':''}" data-act="caladd" data-id="${id}" data-d="${d}"${tem?' disabled':''}>${DC[d]}${tem?' ✓':''}</button>`;}).join('')}</div>`:''}
+  <button class="btn bloco" type="button" data-act="fechar" style="margin-top:12px">Fechar</button>`);
+}
+function trocarLocal(v){
+  const t=executarCmd({tipo:'local',v});save();fecharDlg();
+  abrirDlg(`<h3 class="ok">Plano novo pronto</h3><p>${esc(t)}</p><ul class="lista-ia">${S.plano.explic.map(x=>`<li>${esc(x)}</li>`).join('')}</ul><button class="btn cheio bloco" type="button" data-act="fechar">Ver o plano</button>`);ir('plano');
+}
+
 /* ---------- sessão ---------- */
 const pendente=s=>!s.ok&&!s.skip;
 function ativo(x){const ses=S.sessao,it=ses&&ses.itens[x];if(!it)return -1;if(ses.sel&&ses.sel.x===x&&it.sets[ses.sel.i]&&pendente(it.sets[ses.sel.i]))return ses.sel.i;return it.sets.findIndex(pendente);}
@@ -613,7 +649,7 @@ function telaPlano(){
   if(diaPlano==null||(!S.plano.dias[diaPlano]&&!OS.includes(diaPlano)))diaPlano=ds[0]!=null?ds[0]:1;
   const D=S.plano.dias[diaPlano],orig=S.plano.origem;
   let h=`<h2 class="tit">Seu plano</h2><p class="sub"><span class="selo${orig==='ia'?' ia':''}">${orig==='ia'?'Montado pela IA':orig==='pronto'?'Plano pronto':'Personalizado'}</span> ${esc(S.plano.tipo||'')}</p>
-  <div class="acoes"><button class="btn cheio" type="button" data-act="analisar">Analisar com a IA</button><button class="btn" type="button" data-act="refazer">Refazer com a IA</button></div>
+  <div class="acoes"><button class="btn cheio" type="button" data-act="analisar">Analisar com a IA</button><button class="btn" type="button" data-act="refazer">Refazer com a IA</button><button class="btn" type="button" data-act="ircal">Calistenia</button></div>
   <p class="subt">Dias da semana</p>${seletor(diaPlano,'diaplano',true)}`;
   if(!D){
     h+=`<div class="card"><h3>${DIAS[diaPlano]}: descanso</h3><p>Não tem treino neste dia.</p><button class="btn cheio" type="button" data-act="adddia" data-d="${diaPlano}">Adicionar treino na ${DIAS[diaPlano].toLowerCase()}</button></div>`;
@@ -652,7 +688,7 @@ function bibliotecaHTML(){
   return `<h3>Adicionar exercícios</h3><p class="sub">Treino de ${DIAS[libDia].toLowerCase()}${D?`: ${esc(D.nome)}`:''}. Toque para adicionar ou tirar.</p>
   <input class="busca" id="libbusca" type="search" placeholder="Buscar exercício" value="${esc(libBusca)}" autocomplete="off">
   ${S.perfil.local!=='academia'||(S.perfil.lesoes||[]).length?`<label class="toggle"><input type="checkbox" id="liblocal"${libLocal?' checked':''}> Só os que combinam com meu local e minhas restrições</label>`:''}
-  <div class="abas" id="libabas">${SECOES.map(([n],i)=>`<button type="button" data-act="libaba" data-i="${i}" aria-pressed="${i===libAba&&!libBusca}">${n}</button>`).join('')}</div>
+  <div class="abas" id="libabas">${[...SECOES,['Calistenia',null]].map(([n],i)=>`<button type="button" data-act="libaba" data-i="${i}" aria-pressed="${i===libAba&&!libBusca}">${n}</button>`).join('')}</div>
   <div id="liblista">${bibliotecaLista()}</div>
   <button class="btn cheio bloco" type="button" data-act="libok" style="margin-top:12px">Pronto</button>`;
 }
@@ -666,6 +702,8 @@ function bibliotecaLista(){
     const q=normNome(libBusca),ids=EX_IDS.filter(id=>normNome(EXS[id].n).includes(q)||normNome(GRUPOS[EXS[id].g].n).includes(q));
     return ids.length?ids.map(linha).join(''):'<p class="vazio">Nada encontrado.</p>';
   }
+  if(!SECOES[libAba]){const vistos=new Set();return TRILHAS_CAL.map(t=>{const ids=t.ex.filter(id=>!vistos.has(id)&&filtro(EXS[id]));ids.forEach(id=>vistos.add(id));
+    return ids.length?`<p class="libsec">${t.n}</p>`+ids.map(linha).join(''):'';}).join('')||'<p class="vazio">Nenhum exercício disponível com os filtros atuais.</p>';}
   return SECOES[libAba][1].map(g=>{const ids=EX_IDS.filter(id=>EXS[id].g===g&&filtro(EXS[id]));
     return `<p class="libsec">${GRUPOS[g].n}</p>`+(ids.length?ids.map(linha).join(''):'<p class="vazio">Nenhum exercício disponível com os filtros atuais.</p>');}).join('');
 }
@@ -728,7 +766,7 @@ function perguntar(q){
 }
 /* aplica um pedido do chat, guardando como estava para o botão Desfazer */
 const antesCmd={};
-const NAV=new Set(['irtreino','irplano']);
+const NAV=new Set(['irtreino','irplano','ircal']);
 function fotoEstado(){return JSON.stringify({plano:S.plano,perfil:S.perfil,corpo:S.corpo,apagados:S.apagados,pref:S.ia.pref});}
 function aplicarCmd(c,id){
   const antes=fotoEstado();let t;
@@ -784,6 +822,9 @@ function executarCmd(c){
   else if(c.tipo==='desfazer'){const a=antesCmd[c.ref];if(!a)return 'Não consigo mais desfazer essa mudança. Ajuste direto em Plano.';
     const o=JSON.parse(a);S.plano=o.plano;S.perfil=o.perfil;S.corpo=o.corpo;S.apagados=o.apagados;S.ia.pref=o.pref;delete antesCmd[c.ref];diaSel=null;diaPlano=null;txt='Desfeito. Voltei tudo como estava.';}
   else if(c.tipo==='irplano'){ir('plano');return null;}
+  else if(c.tipo==='ircal'){ir('calistenia');return null;}
+  else if(c.tipo==='local'){if(c.v==='calistenia'&&p.local!=='calistenia')p.localAnt=p.local;p.local=c.v;if(c.v==='calistenia')p.barra=true;
+    txt=regerarPlano(c.v==='calistenia'?'Pronto! Seu plano agora é de calistenia: peso do corpo, barra fixa e paralelas.':`Pronto, voltei seu plano para ${c.v==='academia'?'a academia':IA.LOCAL[c.v].toLowerCase()}.`);}
   else if(c.tipo==='tempo'){p.tempo=c.v;txt=regerarPlano(`Pronto! Refiz o plano para treinos de uns ${c.v} min.`);}
   else if(c.tipo==='dias'){const MOD={1:[1],2:[1,4],3:[1,3,5],4:[1,2,4,5],5:[1,2,3,4,5],6:[1,2,3,4,5,6]};const atual=p.dias||[];
     let novo=atual.length>=c.v?Array.from({length:c.v},(_,i)=>atual[Math.round(i*atual.length/c.v)]):MOD[c.v];p.dias=[...new Set(novo)].sort((a,b)=>OS.indexOf(a)-OS.indexOf(b));
@@ -1087,6 +1128,15 @@ document.addEventListener('click',e=>{
     /* coach */
     case 'sug':perguntar(b.textContent);break;
     case 'instalar':instalar();break;
+    case 'ircal':ir('calistenia');break;
+    case 'caltrilha':calTrilha=b.dataset.t;show('calistenia',true);break;
+    case 'calex':verCal(b.dataset.id);break;
+    case 'caladd':{const d=+b.dataset.d,id=b.dataset.id,D=S.plano.dias[d];if(!D||D.ex.some(x=>x.id===id))break;
+      D.ex.push({u:uid(),id,...IA.prescricao(id,{...S.perfil,local:'calistenia'})});pref(id,.5);marcarEditado();save();toast(`${EXS[id].n} entrou no treino de ${DIAS[d].toLowerCase()}.`);verCal(id);if(atual==='calistenia')show('calistenia',true);break;}
+    case 'calplano':abrirDlg(`<h3>Treino de calistenia</h3><p>A IA vai montar um plano novo só com peso do corpo, barra fixa e paralelas, mantendo seus dias, tempo e objetivo. O plano atual será substituído. Seu histórico continua.</p><div class="acoes"><button class="btn cheio" type="button" data-act="calplanook">Montar o plano</button><button class="btn" type="button" data-act="fechar">Cancelar</button></div>`);break;
+    case 'calplanook':trocarLocal('calistenia');break;
+    case 'calsair':{const v=S.perfil.localAnt&&S.perfil.localAnt!=='calistenia'?S.perfil.localAnt:'academia';abrirDlg(`<h3>Voltar para ${v==='academia'?'a academia':esc(IA.LOCAL[v].toLowerCase())}</h3><p>A IA monta um plano novo com os equipamentos de antes. Seu histórico continua.</p><div class="acoes"><button class="btn cheio" type="button" data-act="calsairok">Montar o plano</button><button class="btn" type="button" data-act="fechar">Cancelar</button></div>`);break;}
+    case 'calsairok':trocarLocal(S.perfil.localAnt&&S.perfil.localAnt!=='calistenia'?S.perfil.localAnt:'academia');break;
     case 'instalarx':LS.set('rt-instalar-oculto',Date.now()+7*864e5);{const c=$('#instalar');if(c)c.remove();}break;
     case 'painel':painelNumeros();break;
     case 'limparchat':armar(b,()=>{S.ia.chat=[];chatCtx={};save();show('coach');},'Limpar?');break;

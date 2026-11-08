@@ -144,6 +144,44 @@ const EXS={
  elev_pernas:X('Elevação de pernas deitado','elev_pernas','abdomen',['abdomen'],[],'i',['corpo'],1,['lombar'],'Lombar colada no chão. Sobe as pernas juntas e desce devagar sem encostar.',BW),
  elev_pernas_barra:X('Elevação de joelhos na barra','elev_pernas_barra','abdomen',['abdomen'],['antebraco'],'i',['barrafixa'],2,[],'Pendurado na barra, sobe os joelhos até a altura do quadril sem balançar.',BW)
 };
+/* ---------- Calistenia: exercícios com o peso do corpo, barra fixa e paralelas ----------
+   rr = repetições ou segundos de partida quando 10 não faz sentido; seg = exercício em segundos. */
+Object.assign(EXS,{
+ flexao_joelhos:X('Flexão com joelhos apoiados','flexao_joelho','peito',['peito','triceps'],['deltAnt'],'c',['corpo'],1,['punho'],'Joelhos no chão e corpo reto dos joelhos até a cabeça. Desce o peito até perto do chão e empurra. Passo entre a flexão inclinada e a flexão completa.'),
+ flexao_declinada:X('Flexão declinada (pés elevados)','flexao_decl','peito',['peito','deltAnt'],['triceps'],'c',['corpo'],2,['punho'],'Pés num banco ou degrau e mãos no chão. Quanto mais altos os pés, mais trabalham a parte de cima do peito e os ombros.'),
+ flexao_arqueiro:X('Flexão arqueiro','flexao','peito',['peito','triceps'],['deltAnt'],'c',['corpo'],3,['punho','ombro'],'Mãos bem afastadas. Desce para um lado dobrando um braço, com o outro esticado, e alterna. Conte as repetições de cada lado. É o passo antes da flexão com um braço.',{rr:6}),
+ flexao_pseudo:X('Flexão pseudoplanche','flexao','peito',['peito','deltAnt'],['triceps','abdomen'],'c',['corpo'],3,['punho'],'Mãos na altura da cintura, dedos virados para fora e corpo inclinado para frente. Mantém essa inclinação durante toda a flexão. Prepara para a planche.',{rr:8}),
+ parada_flexao:X('Flexão em parada de mão na parede','parada_flexao','ombros',['deltAnt','triceps'],['trapezio','deltLat'],'c',['corpo'],3,['ombro','punho'],'De cabeça para baixo com os pés na parede. Desce a cabeça até perto do chão, com os cotovelos um pouco para frente, e empurra. Antes, domine a flexão pike.',{rr:5}),
+ suspensao:X('Suspensão na barra (escápulas ativas)','suspensao','costas',['dorsal','antebraco'],['trapezio'],'i',['barrafixa'],1,[],'Pendura na barra com os braços esticados e puxa os ombros para baixo, longe das orelhas, sem dobrar os cotovelos. Base para a primeira barra fixa.',{seg:true,rr:20}),
+ barra_negativa:X('Barra fixa negativa','barra_fixa','costas',['dorsal'],['biceps','romboides'],'c',['barrafixa'],1,[],'Sobe com a ajuda de um banco até o queixo passar da barra e desce bem devagar, em 3 a 5 segundos. É o melhor caminho para a primeira barra.',{rr:5}),
+ barra_arqueiro:X('Barra fixa arqueiro','barra_fixa','costas',['dorsal','biceps'],['romboides'],'c',['barrafixa'],3,['cotovelo'],'Pegada bem aberta. Puxa o corpo em direção a uma das mãos, com o outro braço quase esticado, e alterna os lados.',{rr:4}),
+ muscle_up:X('Muscle-up na barra','muscle_up','costas',['dorsal','triceps'],['peito','biceps'],'c',['barrafixa'],3,['ombro','cotovelo'],'Barra explosiva até o peito passar da barra, gira os punhos por cima e termina com um mergulho. Faça antes 10 barras e 10 paralelas bem feitas.',{rr:3}),
+ front_lever:X('Front lever grupado','front_lever','costas',['dorsal'],['abdomen','deltPost'],'i',['barrafixa'],3,['ombro'],'Pendurado, leva o corpo para a horizontal com os joelhos junto ao peito e os braços esticados. Segura e respira. Depois vá abrindo as pernas aos poucos.',{seg:true,rr:8}),
+ bulgaro_corpo:X('Agachamento búlgaro (peso do corpo)','bulgaro_livre','quadriceps',['quadriceps','gluteos'],['posteriores'],'c',['corpo'],2,['joelho'],'Pé de trás num banco. Desce até o joelho de trás chegar perto do chão, com o tronco firme. Conte as repetições de cada perna.'),
+ agachamento_salto:X('Agachamento com salto','agacha_livre','quadriceps',['quadriceps','gluteos'],['panturrilha'],'c',['corpo'],2,['joelho'],'Agacha e salta o mais alto que puder. Aterrissa macio, já descendo para a próxima. Ótimo para potência e condicionamento.'),
+ pistol_assist:X('Pistol assistido (segurando num apoio)','pistol','quadriceps',['quadriceps','gluteos'],['abdomen'],'c',['corpo'],2,['joelho'],'Segura num poste ou batente e desce numa perna só, com a outra esticada à frente. Use o apoio só o necessário.',{rr:6}),
+ pistol:X('Agachamento pistol','pistol','quadriceps',['quadriceps','gluteos'],['abdomen'],'c',['corpo'],3,['joelho'],'Numa perna só, com a outra esticada à frente, desce até o fim e sobe sem apoio. Braços à frente ajudam no equilíbrio.',{rr:5}),
+ nordico:X('Flexão nórdica','nordico','posteriores',['posteriores'],['gluteos'],'i',['corpo'],3,['joelho'],'Ajoelhado, com os pés presos embaixo de um sofá ou segurados por alguém. Desce o corpo reto para frente o mais devagar possível e usa as mãos para amortecer. Protege contra lesões de posterior.',{rr:5}),
+ ponte_uni:X('Ponte de glúteo unilateral','ponte','gluteos',['gluteos'],['posteriores'],'i',['corpo'],2,[],'Uma perna esticada no ar. Sobe o quadril com a outra e segura 1 segundo no alto. Conte as repetições de cada lado.',{rr:12}),
+ hollow:X('Canoinha (hollow hold)','hollow','abdomen',['abdomen'],[],'i',['corpo'],1,['lombar'],'Deitado, lombar colada no chão, ombros e pernas um pouco erguidos e braços para trás. Se a lombar sair do chão, dobre os joelhos. Base de quase todas as habilidades.',{seg:true,rr:20}),
+ lsit:X('L-sit','lsit','abdomen',['abdomen'],['triceps','quadriceps'],'i',['paralela'],3,['punho'],'Mãos nas paralelas ou no chão, braços esticados e pernas esticadas na horizontal. Comece com os joelhos dobrados junto ao peito.',{seg:true,rr:10}),
+ elev_pernas_estendidas:X('Elevação de pernas estendidas na barra','elev_pernas_barra','abdomen',['abdomen'],['antebraco'],'i',['barrafixa'],3,['lombar'],'Pendurado, sobe as pernas esticadas até a altura do quadril ou mais, sem balançar o corpo.'),
+ parada_mao:X('Parada de mão na parede','parada_mao','ombros',['deltAnt'],['trapezio','triceps','abdomen'],'i',['corpo'],2,['punho','ombro'],'De frente ou de costas para a parede, sobe os pés e fica invertido com os braços esticados, empurrando o chão. Comece com 15 a 30 segundos.',{seg:true,rr:20}),
+ corvo:X('Pose do corvo (equilíbrio nas mãos)','corvo','ombros',['deltAnt'],['abdomen','triceps'],'i',['corpo'],2,['punho'],'Agachado, apoia os joelhos atrás dos cotovelos e inclina o corpo para frente até os pés saírem do chão. É a primeira habilidade de equilíbrio.',{seg:true,rr:10}),
+ planche_lean:X('Planche lean','planche_lean','ombros',['deltAnt'],['peito','abdomen'],'i',['corpo'],2,['punho'],'Na posição de flexão com os braços esticados, leva os ombros bem à frente das mãos e segura. É a base para a planche.',{seg:true,rr:15})
+});
+/* trilhas de progressão: do mais fácil ao mais difícil */
+const TRILHAS_CAL=[
+ {id:'empurrar',n:'Empurrar',d:'Peito, ombros e tríceps',ex:['flexao_inclinada','flexao_joelhos','flexao','mergulho_banco','flexao_declinada','flexao_diamante','flexao_pike','flexao_arqueiro','flexao_pseudo','paralelas','parada_flexao']},
+ {id:'puxar',n:'Puxar',d:'Costas e bíceps',ex:['suspensao','remada_invertida','barra_negativa','barra_supinada','barra_fixa','barra_arqueiro','muscle_up']},
+ {id:'pernas',n:'Pernas',d:'Coxas, glúteos e panturrilhas',ex:['agachamento_corpo','afundo_corpo','ponte','panturrilha_corpo','agachamento_salto','bulgaro_corpo','ponte_uni','stiff_unilateral','pistol_assist','pistol','nordico']},
+ {id:'core',n:'Abdômen',d:'Core forte, base de todas as habilidades',ex:['prancha','hollow','prancha_lateral','elev_pernas_barra','elev_pernas_estendidas','lsit']},
+ {id:'habilidade',n:'Habilidades',d:'Equilíbrio e força avançada',ex:['corvo','planche_lean','parada_mao','front_lever','muscle_up']}
+];
+const CAL_IDS=new Set(TRILHAS_CAL.flatMap(t=>t.ex));
+CAL_IDS.forEach(id=>{EXS[id].cal=true;if(!EXS[id].seg)EXS[id].bw=true;});
+/* próximo passo da trilha (para sugerir a evolução) */
+function proximaCal(id){for(const t of TRILHAS_CAL){const i=t.ex.indexOf(id);if(i>=0&&i<t.ex.length-1&&t.id!=='habilidade'){const nx=t.ex.slice(i+1).find(x=>EXS[x].g===EXS[id].g&&EXS[x].nv>=EXS[id].nv);if(nx)return nx;}}return null;}
 const EX_IDS=Object.keys(EXS);
 
 /* alternativas: mesmo grupo e mesmos músculos principais, ordenadas por semelhança */

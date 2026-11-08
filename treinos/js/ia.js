@@ -11,7 +11,7 @@ const IA=(()=>{
     saude:{n:'Saúde e condicionamento',desc:[75,60],kcal:p=>p.imc>=27?-.12:0,prot:1.5}
   };
   const NIVEL={ini:'Iniciante',inter:'Intermediário',avan:'Avançado'};
-  const LOCAL={academia:'Academia completa',casa_halteres:'Casa com halteres',casa_corpo:'Casa, só peso do corpo'};
+  const LOCAL={academia:'Academia completa',casa_halteres:'Casa com halteres',casa_corpo:'Casa, só peso do corpo',calistenia:'Calistenia: barra, paralelas e peso do corpo'};
   const DIAS=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
   const DIAS_C=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
   const ORDEM_SEMANA=[1,2,3,4,5,6,0];
@@ -44,6 +44,8 @@ const IA=(()=>{
   /* ---------- filtros ---------- */
   function eqOk(ex,p){
     if(!p||p.local==='academia'||!p.local)return true;
+    /* calistenia: só os passos das trilhas, mais os abdominais de chão */
+    if(p.local==='calistenia')return !!ex.cal||(ex.g==='abdomen'&&ex.eq.every(e=>e==='corpo'));
     const ok=new Set(p.local==='casa_halteres'?['halter','banco','corpo']:['corpo']);
     if(p.barra)ok.add('barrafixa');
     return ex.eq.every(e=>ok.has(e));
@@ -54,7 +56,7 @@ const IA=(()=>{
 
   /* ---------- prescrição padrão ---------- */
   function prescricao(id,p){
-    const ex=EXS[id],o=OBJ[p&&p.objetivo]||OBJ.massa,it={s:PADRAO.s,r:ex.seg?30:PADRAO.r,desc:p&&p.desc?+p.desc:(ex.t==='c'?o.desc[0]:o.desc[1])};
+    const ex=EXS[id],o=OBJ[p&&p.objetivo]||OBJ.massa,cal=p&&p.local==='calistenia'&&ex.rr,it={s:PADRAO.s,r:cal||(ex.seg?30:PADRAO.r),desc:p&&p.desc?+p.desc:(ex.t==='c'?o.desc[0]:o.desc[1])};
     const ob=obsCuidado(id,p);if(ob)it.obs=ob;
     return it;
   }
@@ -135,7 +137,7 @@ const IA=(()=>{
   function estimaMin(ex){return Math.round(5+ex.reduce((a,it)=>a+it.s*((EXS[it.id].seg?it.r:40)+(+it.desc||60))/60+1.2,0));}
 
   /* exercícios-base que a IA prefere e os que ela usa só como complemento */
-  const ESSENCIAL=new Set(['supino_reto','supino_halter','incl_halter','incl_barra','supino_maquina','crossover','flexao','puxada','barra_fixa','remada_baixa','remada_curvada','remada_unilateral','remada_maquina','remada_invertida','desenvolvimento','desenvolvimento_maquina','elev_lateral','face_pull','rosca_direta','rosca_martelo','rosca_alternada','corda','polia_barra','testa','frances','encolhimento','agachamento','leg_press','agachamento_goblet','agachamento_corpo','afundo','bulgaro','stiff','stiff_halter','mesa_flexora','hip_thrust','hip_halter','ponte','panturrilha_pe','panturrilha_halter','panturrilha_corpo','abdominal','prancha','afundo_corpo','remada_uni_mochila','elev_lateral_garrafa','sumo']);
+  const ESSENCIAL=new Set(['flexao_inclinada','flexao_joelhos','flexao_declinada','flexao_arqueiro','paralelas','barra_negativa','bulgaro_corpo','pistol_assist','pistol','nordico','ponte_uni','supino_reto','supino_halter','incl_halter','incl_barra','supino_maquina','crossover','flexao','puxada','barra_fixa','remada_baixa','remada_curvada','remada_unilateral','remada_maquina','remada_invertida','desenvolvimento','desenvolvimento_maquina','elev_lateral','face_pull','rosca_direta','rosca_martelo','rosca_alternada','corda','polia_barra','testa','frances','encolhimento','agachamento','leg_press','agachamento_goblet','agachamento_corpo','afundo','bulgaro','stiff','stiff_halter','mesa_flexora','hip_thrust','hip_halter','ponte','panturrilha_pe','panturrilha_halter','panturrilha_corpo','abdominal','prancha','afundo_corpo','remada_uni_mochila','elev_lateral_garrafa','sumo']);
   const COMPLEMENTO=new Set(['elev_frontal','remada_alta','pullover','hiperextensao','rosca_punho','farmer','pulldown_ext','crucifixo_halter','elev_pernas_barra','bicicleta','prancha_lateral','stiff_unilateral','gluteo_polia']);
   const VERTICAL=new Set(['barra_fixa','puxada','puxada_neutra','pulldown_ext','barra_supinada']);
   /* evidência: treinar o músculo alongado rende mais (Maeo 2021 e 2023, Wolf 2023) */
@@ -182,6 +184,8 @@ const IA=(()=>{
         if(p.objetivo==='forca'&&e.t==='c')s+=W.forcaComp+(e.eq.includes('barra')?W.forcaBarra:0);
         if(p.local==='academia'&&e.eq.includes('corpo')&&!e.eq.includes('barrafixa')&&e.g!=='abdomen')s+=W.casaNaAcademia;
         if(usados.has(id))s+=ESSENCIAL.has(id)?W.usado*.35:W.usado;
+        /* na calistenia, o passo da trilha que combina com o nível da pessoa */
+        if(p.local==='calistenia'&&e.cal){const alvo=p.nivel==='avan'?3:p.nivel==='inter'?2:1;s+=4+2-1.5*Math.abs(e.nv-alvo);}
         if(doDia.some(x=>EXS[x].pose===e.pose))s+=W.poseRep;
         s+=W.pref*((prefs&&prefs[id])||0);
         s+=W.acaso*(hash((p.nome||'')+id)%100)/100;
@@ -266,7 +270,8 @@ const IA=(()=>{
     if(p.foco&&p.foco.length)ex.push(p.somente?`Treino só de ${lista(p.foco.map(g=>GRUPOS[g].n.toLowerCase()))}, como você pediu.`:`Volume extra para ${lista(p.foco.map(g=>GRUPOS[g].n.toLowerCase()))} e esses grupos vêm primeiro no treino.`);
     if(p.evitar&&p.evitar.length)ex.push(`Sem exercícios de ${lista(p.evitar.map(g=>GRUPOS[g].n.toLowerCase()))}.`);
     if(p.lesoes&&p.lesoes.length)ex.push(`Evitei exercícios que forçam ${lista(p.lesoes.map(l=>ART[l]))}. Alguns ficaram liberados com um aviso de cuidado.`);
-    if(p.local!=='academia')ex.push(`Só exercícios que dá para fazer em casa${p.local==='casa_halteres'?' com halteres':' sem equipamento'}${p.barra?' e na barra fixa':''}.`);
+    if(p.local==='calistenia')ex.push('Treino de calistenia: peso do corpo, barra fixa e paralelas. Quando um exercício ficar fácil, o app sugere o próximo passo da progressão.');
+    else if(p.local!=='academia')ex.push(`Só exercícios que dá para fazer em casa${p.local==='casa_halteres'?' com halteres':' sem equipamento'}${p.barra?' e na barra fixa':''}.`);
     const imcP=(+p.peso||70)/Math.pow((+p.altura||170)/100,2);
     if(+p.idade>=60)ex.push('Acima dos 60 anos, priorizei máquinas: elas dão ótimos ganhos de força com menos risco.');
     if(imcP>=30)ex.push('Escolhi exercícios com pouco impacto nas articulações. Somar caminhadas, umas 150 min por semana, ajuda muito na perda de gordura.');
@@ -297,8 +302,10 @@ const IA=(()=>{
     if(!u)return ex.bw||ex.seg?`Primeira vez: faça ${alvo}${un} com boa técnica.`:'Primeira vez: escolha uma carga em que a última repetição saia firme, sem roubar.';
     const sets=u.sets,bateu=sets.length>=it.s&&sets.every(s=>s.r>=alvo);
     const kgs=sets.map(s=>+s.kg).filter(x=>x>0),kg=kgs.length?Math.max(...kgs):0;
-    if(ex.seg)return bateu?`Bateu ${alvo} s em todas. Hoje tente ${alvo+10} s.`:`Tente chegar a ${alvo} s em todas as séries.`;
-    if(ex.bw&&!kg)return bateu?`Bateu ${alvo} em todas. Desça mais devagar ou faça ${alvo+2} por série.`:'Busque mais repetições que da última vez.';
+    const nx=ex.cal&&typeof proximaCal==='function'?proximaCal(it.id):null;
+    if(ex.seg){if(bateu&&nx&&alvo>=30)return `Bateu ${alvo} s em todas. Já dá para começar a treinar ${EXS[nx].n}.`;return bateu?`Bateu ${alvo} s em todas. Hoje tente ${alvo+10} s.`:`Tente chegar a ${alvo} s em todas as séries.`;}
+    if(ex.bw&&!kg){if(bateu&&nx&&(alvo>=12||u.sens==='facil'))return `Bateu ${alvo} em todas. Hora de evoluir: troque por ${EXS[nx].n}, ou faça ${alvo+2} por série.`;
+      return bateu?`Bateu ${alvo} em todas. Desça mais devagar ou faça ${alvo+2} por série.${nx?` Com 12 a 15 fáceis, passe para ${EXS[nx].n}.`:''}`:'Busque mais repetições que da última vez.';}
     if(bateu&&u.sens==='pesado')return carga&&kg?`Bateu ${alvo} em todas, mas achou pesado. Repita ${fmtKg(kg)} kg hoje até ficar firme.`:`Bateu ${alvo} em todas, mas achou pesado. Repita o peso hoje até ficar firme.`;
     if(bateu&&u.sens==='facil')return carga&&kg?`Bateu ${alvo} em todas e achou fácil. Hoje pode ir para ${fmtKg(kg+2*incremento(kg))} kg.`:`Bateu ${alvo} em todas e achou fácil. Hoje suba o peso com vontade.`;
     if(bateu)return carga&&kg?`Bateu ${alvo} em todas com ${fmtKg(kg)} kg. Hoje tente ${fmtKg(kg+incremento(kg))} kg.`:`Bateu ${alvo} em todas. Hoje suba um pouco o peso.`;
@@ -520,6 +527,17 @@ const IA=(()=>{
     const mDor=n.match(/\b(dor|doendo|doi|machuquei|lesao|lesionei|incomoda)\b/);
     if(mDor){const l=palavras.map(w=>PALAVRA_LESAO[w]).find(Boolean);
       if(l)return{txt:`Dor ${l==='lombar'?'na lombar':'no '+l} merece cuidado. Se for forte, em pontada ou não passar, procure um médico ou fisioterapeuta. Posso marcar isso no seu perfil e refazer o plano evitando os exercícios que mais forçam ${ART[l]}.`,acoes:(p.lesoes||[]).includes(l)?[]:[{lab:'Marcar e refazer o plano',cmd:{tipo:'lesao',l},sim:1}]};}
+
+    /* modalidade: calistenia ou academia */
+    const pergunta=/\b(funciona|o que e|como|vale a pena|serve|ajuda|da para|da pra|e bom|ganha|quantas|quantos|quanto|posso|pode|qual|quais|por que|porque|todo dia|e melhor|ou)\b/.test(n);
+    if(/\b(calistenia|street workout)\b/.test(n)&&!pergunta){
+      if(/\b(ver|mostra|mostrar|abre|abrir|lista|listar|quais)\b/.test(n))return{txt:'A área de calistenia mostra todas as progressões, do mais fácil ao mais difícil, com o boneco fazendo cada exercício.',acoes:[{lab:'Abrir a calistenia',cmd:{tipo:'ircal'},sim:1}]};
+      if(/\b(quero|queria|mudar|muda|mude|trocar|troca|troque|passar|passa|passe|montar|monta|monte|virar|prefiro|bora|vamos)\b/.test(n)){
+        if(p.local==='calistenia')return{txt:'Seu plano já é de calistenia. Veja as progressões na área de calistenia.',acoes:[{lab:'Abrir a calistenia',cmd:{tipo:'ircal'},sim:1}]};
+        return{txt:'',fazer:{tipo:'local',v:'calistenia'}};}
+    }
+    if(p.local==='calistenia'&&/\b(voltar|volta|mudar|muda|trocar|troca|quero|prefiro)\b/.test(n)&&/\b(academia|musculacao|maquinas|pesos|halteres)\b/.test(n)&&!pergunta)
+      return{txt:'',fazer:{tipo:'local',v:p.localAnt&&p.localAnt!=='calistenia'?p.localAnt:'academia'}};
 
     /* pedidos para um dia da semana */
     const ds=diasNo(palavras),relativo=/\b(hoje|amanha)\b/.test(n);

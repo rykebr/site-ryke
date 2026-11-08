@@ -8,26 +8,122 @@
   "start_url": "./#treino",
   "scope": "./",
   "display": "standalone",
-  "display_override": ["standalone", "minimal-ui"],
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "orientation": "portrait",
   "background_color": "#050C1F",
   "theme_color": "#1666E0",
-  "categories": ["health", "fitness", "sports", "lifestyle"],
+  "categories": [
+    "health",
+    "fitness",
+    "sports",
+    "lifestyle"
+  ],
   "prefer_related_applications": false,
   "icons": [
-    { "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "img/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "img/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "img/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "img/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "img/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "Treino de hoje", "short_name": "Treino", "description": "Abre o treino do dia", "url": "./#treino", "icons": [{ "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "Coach IA", "short_name": "Coach", "description": "Conversar sobre treino e alimentação", "url": "./#coach", "icons": [{ "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png" }] },
-    { "name": "Evolução", "short_name": "Evolução", "description": "Gráficos, corpo e histórico", "url": "./#evolucao", "icons": [{ "src": "img/icon-192.png", "sizes": "192x192", "type": "image/png" }] }
+    {
+      "name": "Treino de hoje",
+      "short_name": "Treino",
+      "description": "Abre o treino do dia",
+      "url": "./#treino",
+      "icons": [
+        {
+          "src": "img/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Coach IA",
+      "short_name": "Coach",
+      "description": "Conversar sobre treino e alimentação",
+      "url": "./#coach",
+      "icons": [
+        {
+          "src": "img/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Evolução",
+      "short_name": "Evolução",
+      "description": "Gráficos, corpo e histórico",
+      "url": "./#evolucao",
+      "icons": [
+        {
+          "src": "img/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Calistenia",
+      "short_name": "Calistenia",
+      "description": "Trilhas de progressão com o peso do corpo",
+      "url": "./#calistenia",
+      "icons": [
+        {
+          "src": "img/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
   ],
   "screenshots": [
-    { "src": "img/telas/cel-inicio.webp", "sizes": "540x1170", "type": "image/webp", "form_factor": "narrow", "label": "Tela inicial com as pessoas que treinam" },
-    { "src": "img/telas/cel-treino.webp", "sizes": "540x1170", "type": "image/webp", "form_factor": "narrow", "label": "Treino guiado com boneco animado e descanso" },
-    { "src": "img/telas/cel-coach.webp", "sizes": "540x1170", "type": "image/webp", "form_factor": "narrow", "label": "Coach IA montando o cardápio do dia" },
-    { "src": "img/telas/pc-inicio.webp", "sizes": "1280x720", "type": "image/webp", "form_factor": "wide", "label": "Ryke Treinos no computador" }
+    {
+      "src": "img/telas/cel-inicio.webp",
+      "sizes": "540x1170",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Tela inicial com as pessoas que treinam"
+    },
+    {
+      "src": "img/telas/cel-treino.webp",
+      "sizes": "540x1170",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Treino guiado com boneco animado e descanso"
+    },
+    {
+      "src": "img/telas/cel-coach.webp",
+      "sizes": "540x1170",
+      "type": "image/webp",
+      "form_factor": "narrow",
+      "label": "Coach IA montando o cardápio do dia"
+    },
+    {
+      "src": "img/telas/pc-inicio.webp",
+      "sizes": "1280x720",
+      "type": "image/webp",
+      "form_factor": "wide",
+      "label": "Ryke Treinos no computador"
+    }
   ]
 }
