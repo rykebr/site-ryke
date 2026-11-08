@@ -1533,9 +1533,9 @@
   Narrador.on('estado', () => atualizarBarraNarracao());
   Narrador.on('erro', (m) => toast(m, 4500));
   Narrador.on('baixandoVoz', (d) => toast(
-    d.falhou ? `Não consegui baixar a voz ${d.nome} (${d.motivo}). Sigo com a voz do aparelho e tento de novo na próxima narração.`
-      : d.fim ? `Voz ${d.nome} pronta: a narração troca para ela na próxima frase. Fica guardada para usar offline.`
-        : `Baixando a voz ${d.nome} (só na primeira vez): ${Math.round(d.pct * 100)}%. Enquanto isso, leio com a voz do aparelho.`,
+    d.falhou ? `Não consegui baixar a voz ${d.nome} (${d.motivo}). Toque em Ouvir de novo para tentar outra vez; o download continua de onde parou.`
+      : d.fim ? `Voz ${d.nome} pronta. A narração começa agora, e a voz fica guardada para usar offline.`
+        : `Baixando a voz ${d.nome} (só na primeira vez): ${Math.round(d.pct * 100)}%. A narração começa quando terminar.`,
     d.falhou ? 6000 : d.fim ? 3500 : 60000));
   Narrador.on('dormiu', () => toast('Timer de dormir: narração pausada. Boa noite!', 4000));
   Narrador.on('fim', () => { if (leitorAberto) mostrarFim(leitorAberto.item); });

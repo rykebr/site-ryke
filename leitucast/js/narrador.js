@@ -117,7 +117,7 @@ const Narrador = (() => {
   /* ---------------- worker Piper ---------------- */
   function chamar(tipo, dados, aoProg) {
     if (!worker) {
-      worker = new Worker(new URL('js/voz-piper.js?v=8', location.href).href);
+      worker = new Worker(new URL('js/voz-piper.js?v=9', location.href).href);
       worker.onmessage = (e) => {
         const p = pedidos.get(e.data.id);
         if (!p) return;
@@ -312,8 +312,8 @@ const Narrador = (() => {
     if (ctx.state === 'suspended') await ctx.resume();
     let r;
     try {
-      // primeira vez com esta voz: baixa em segundo plano (fica guardada para usar offline) e, enquanto isso,
-      // a narração já começa com a voz do aparelho; quando a voz neural fica pronta, troca na frase seguinte
+      // primeira vez com esta voz: baixa mostrando o progresso e só então começa a narrar com ela
+      // (fica guardada para usar offline)
       if (!baixadas.has(v.id)) {
         if (await vozBaixada(v)) baixadas.add(v.id);
         else {
@@ -326,10 +326,9 @@ const Narrador = (() => {
             pr.catch(() => null);
             baixando.set(v.id, pr);
           }
-          const { sistema } = await listarVozes(v.lang);
+          // espera a voz escolhida terminar de baixar (nunca começa com outra voz); parar continua funcionando
+          await baixando.get(v.id);
           if (ger !== geracao) return;
-          if (sistema[0]) return falarSistema(sistema[0], est, ger);
-          await baixando.get(v.id); // sem voz no aparelho: espera a neural
         }
       }
       if (ger !== geracao) return;
@@ -340,10 +339,10 @@ const Narrador = (() => {
       if (v.tipo === 'kokoro' && dura > 1.5 && gastou > dura * 1.15 && !avisouLenta) { avisouLenta = true; emitir('erro', `A voz ${v.nome} está mais lenta que a leitura neste aparelho e pode pausar entre as frases. A Faber é bem mais rápida.`); }
     } catch (e) {
       if (ger !== geracao) return;
-      emitir('erro', 'Não consegui usar a voz ' + v.nome + (navigator.onLine === false ? ' sem internet' : '') + '. Usando a voz do aparelho.');
-      semNeural = true;
-      cfg.voz = await vozPadrao(v.lang);
-      return falarAtual(ger);
+      // não troca de voz sozinho: para e avisa (a pessoa tenta de novo ou escolhe outra voz)
+      const baixou = baixadas.has(v.id);
+      if (baixou) emitir('erro', `A voz ${v.nome} falhou nesta frase. Toque em Ouvir para tentar de novo.`);
+      return parar();
     }
     if (ger !== geracao) return;
     for (let k = 1; k <= 2; k++) if (frases[fi + k]) sintetizar(v, fi + k, est).catch(() => null);
@@ -553,7 +552,21 @@ const Narrador = (() => {
     pararAmostra();
     const meu = ++amostraGer;
     let v = await acharVoz(cfg.voz || await vozPadrao('pt-BR'));
-    if (!v || (v.motor === 'piper' && !(baixadas.has(v.id) || await vozBaixada(v)))) { const { sistema } = await listarVozes('pt-BR'); v = sistema[0] || null; }
+    if (v && v.motor === 'piper' && !(baixadas.has(v.id) || await vozBaixada(v))) {
+      // a voz escolhida ainda não está no aparelho: baixa e espera (não troca de voz sozinho)
+      if (!baixando.has(v.id)) {
+        emitir('baixandoVoz', { nome: v.nome, pct: 0 });
+        const pr = baixarVoz(v, (q) => { if (q.parte === 'voz' && q.t) emitir('baixandoVoz', { nome: v.nome, pct: q.n / q.t }); })
+          .then(() => { baixadas.add(v.id); emitir('baixandoVoz', { nome: v.nome, pct: 1, fim: true }); })
+          .catch((e) => { emitir('baixandoVoz', { nome: v.nome, falhou: true, motivo: e.message }); throw e; })
+          .finally(() => baixando.delete(v.id));
+        pr.catch(() => null);
+        baixando.set(v.id, pr);
+      }
+      try { await baixando.get(v.id); } catch (e) { return false; }
+      if (meu !== amostraGer) return false;
+    }
+    if (!v) { const { sistema } = await listarVozes('pt-BR'); v = sistema[0] || null; }
     if (!v || meu !== amostraGer) return false;
     const pals = []; const rx = /[\p{L}\p{N}][\p{L}\p{N}'’\-]*/gu; let m;
     while ((m = rx.exec(texto))) pals.push({ i: m.index, f: m.index + m[0].length, peso: m[0].length + 2 + (/[,;:—]/.test(texto[m.index + m[0].length] || '') ? 3 : 0) + (/[.!?…]/.test(texto[m.index + m[0].length] || '') ? 6 : 0) });
