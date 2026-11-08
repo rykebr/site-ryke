@@ -47,7 +47,7 @@ img { max-width: 100%; }
 .carregando img { animation: pulsa 1.6s ease-in-out infinite; }
 @keyframes pulsa { 50% { transform: scale(1.08); opacity: .7; } }
 .miolo { width: min(1180px, 100%); margin: 0 auto; padding: 0 18px; }
-.nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; height: calc(var(--nav-h) + var(--base)); padding-bottom: var(--base); display: grid; grid-template-columns: repeat(5, 1fr);
+.nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; height: calc(var(--nav-h) + var(--base)); padding-bottom: var(--base); display: grid; grid-template-columns: repeat(6, 1fr);
   background: color-mix(in srgb, var(--bg2) 88%, transparent); backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4); border-top: 1px solid var(--linha); }
 .nav a { display: grid; justify-items: center; align-content: center; gap: 3px; color: var(--tx3); text-decoration: none; font-size: 11px; font-weight: 600; letter-spacing: .02em; position: relative; }
 .nav a .ico { width: 24px; height: 24px; transition: transform .2s; }
@@ -605,3 +605,8 @@ html, body, button, a, .kid-leitor { touch-action: manipulation; }
 .pg-janela { contain: strict; }
 .pg { contain: layout paint style; }
 .lt-face { will-change: transform; }
+
+/* botão "Pular introdução" no leitor */
+.lt-pular { position: absolute; z-index: 30; left: 50%; transform: translateX(-50%); bottom: calc(86px + env(safe-area-inset-bottom)); display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 999px; background: rgba(20, 17, 29, .88); color: #F3E9D8; font: 700 14.5px var(--f-ui); box-shadow: 0 8px 24px rgba(0,0,0,.35); backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,.12); }
+.lt-pular .ico { width: 18px; height: 18px; }
+.leitor.limpo .lt-pular { opacity: .85; }

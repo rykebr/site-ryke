@@ -53,6 +53,7 @@ const Narrador = (() => {
   let worker = null, pedidos = new Map(), nPed = 0;
   let ctx = null, fonte = null, inicioAudio = 0, durAtual = 0, palavrasAtual = [], raf = 0;
   let prefetch = new Map();
+  let livroAtual = null;
   const baixadas = new Set();
   const baixando = new Map();
   let avisouLenta = false;
@@ -117,7 +118,7 @@ const Narrador = (() => {
   /* ---------------- worker Piper ---------------- */
   function chamar(tipo, dados, aoProg) {
     if (!worker) {
-      worker = new Worker(new URL('js/voz-piper.js?v=9', location.href).href);
+      worker = new Worker(new URL('js/voz-piper.js?v=10', location.href).href);
       worker.onmessage = (e) => {
         const p = pedidos.get(e.data.id);
         if (!p) return;
@@ -606,6 +607,10 @@ const Narrador = (() => {
     tocar, pausar, continuar, parar, pular, ajustar, dormir, amostra, pararAmostra, on, segmentar, _falavel: falavel,
     definirMidia: (m) => { midia = m; },
     get estado() { return estado(); }, get cfg() { return { ...cfg }; },
-    configurar: (c, fns) => { cfg = { ...cfg, ...c }; ouvintes.texto = [fns.texto]; ouvintes.ncaps = [fns.ncaps]; },
+    configurar: (c, fns) => {
+      // livro novo: para a narração anterior e esquece o texto dele (senão o capítulo 1 do livro antigo seria lido)
+      if (c.livro && c.livro !== livroAtual) { if (ativo) parar(); livroAtual = c.livro; cap = -1; txt = ''; frases = []; fi = 0; ultimaPalavra = null; prefetch.clear(); }
+      cfg = { ...cfg, ...c }; ouvintes.texto = [fns.texto]; ouvintes.ncaps = [fns.ncaps];
+    },
   };
 })();

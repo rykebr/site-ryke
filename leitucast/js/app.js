@@ -204,7 +204,7 @@
   });
 
   /* ================= navegação ================= */
-  const ABAS = [['inicio', 'casa', 'Início'], ['busca', 'busca', 'Buscar'], ['estante', 'estante', 'Estante'], ['lia', 'ia', 'Lia'], ['perfil', 'perfil', 'Perfil']];
+  const ABAS = [['inicio', 'casa', 'Início'], ['busca', 'busca', 'Buscar'], ['estante', 'estante', 'Estante'], ['infantil', 'infantil', 'Infantis'], ['lia', 'ia', 'Lia'], ['perfil', 'perfil', 'Perfil']];
   function montarNav() {
     const h = ABAS.map(([k, i, n]) => `<a href="#${k}" data-n="${k}">${ico(i)}<span>${n}</span></a>`).join('');
     $('#nav').innerHTML = h;
@@ -1356,7 +1356,9 @@
       },
     });
     Narrador.definirMidia({ titulo: item.t, autor: item.a, capa: capaSrc(item) });
-    Narrador.configurar({ ...S.cfg.voz, lang: idiomaVoz(item.l) }, { texto: (c) => Leitor.textoCapitulo(c), ncaps: () => (Leitor.livro ? Leitor.livro.caps.length : 0) });
+    Narrador.configurar({ ...S.cfg.voz, lang: idiomaVoz(item.l), livro: item.id }, { texto: (c) => Leitor.textoCapitulo(c), ncaps: () => (Leitor.livro ? Leitor.livro.caps.length : 0) });
+    prepararPular(item);
+    $('#ltPular').onclick = pularIntroducao;
     if (op.ouvir) setTimeout(iniciarNarracao, 300);
     else if (!LS.get('lc-dica-virar')) { LS.set('lc-dica-virar', 1); toast('Toque nas bordas ou arraste para virar a página. Toque no meio para esconder os botões.', 5000); }
   }
@@ -1371,6 +1373,7 @@
         <button class="icobtn" data-lt="narrar" aria-label="Ouvir narração">${ico('fone')}</button>
         <button class="icobtn" data-lt="marcador" id="ltMarc" aria-label="Marcar página">${ico('marcador')}</button></header>
       <div class="lt-corpo" id="ltCorpo"></div>
+      <button class="lt-pular" id="ltPular" hidden>${ico('frente')} Pular introdução</button>
       <div class="lt-narra" id="ltNarra" hidden>
         <span class="ondas" id="ltOndas"><i></i><i></i><i></i><i></i></span>
         <div class="voz-nome"><b id="ltVoz">Narração</b><small id="ltVozSub"></small></div>
@@ -1402,8 +1405,37 @@
     prog.oninput = () => { prog.style.setProperty('--v', prog.value / 10 + '%'); $('#ltPag').textContent = Math.round(prog.value / 10) + '%'; };
     prog.onchange = () => Leitor.irParaPct(prog.value / 1000);
   }
+  /* "Pular introdução": aparece enquanto a página está antes do início da história */
+  let inicioHist = null;
+  async function conferirPular() {
+    const bt = $('#ltPular');
+    if (!bt || !Leitor.aberto || !Leitor.livro) return;
+    const ini = inicioHist && inicioHist.id === (leitorAberto && leitorAberto.item.id) ? inicioHist.r : null;
+    if (!ini || inicioHist.feito) { bt.hidden = true; return; }
+    const p = Leitor.pos;
+    const antes = p.c < ini.c || (p.c === ini.c && Leitor.posicaoAtual().o + 40 < ini.o);
+    bt.hidden = !antes;
+  }
+  async function prepararPular(item) {
+    inicioHist = null;
+    const r = await Leitor.inicioDaHistoria().catch(() => null);
+    // só vale a pena se houver uma introdução de verdade para pular
+    if (r && (r.c > 0 || r.o > 100)) inicioHist = { id: item.id, r, feito: false };
+    conferirPular();
+  }
+  async function pularIntroducao() {
+    if (!inicioHist) return;
+    const { c, o } = inicioHist.r;
+    const narrando = Narrador.estado.ativo && Narrador.estado.tocando;
+    await Leitor.irPara(c, o);
+    inicioHist.feito = true;
+    if (narrando) Narrador.tocar(c, o);
+    $('#ltPular').hidden = true;
+    toast('Pronto: começo da história.', 2000);
+  }
   function atualizarRodapeLeitor(r) {
     if (!leitorAberto) return;
+    conferirPular();
     const prog = $('#ltProg');
     if (prog && document.activeElement !== prog) { prog.value = Math.round(r.pct * 1000); prog.style.setProperty('--v', r.pct * 100 + '%'); }
     const pag = $('#ltPag');
@@ -1547,7 +1579,9 @@
       const p = await Narrador.vozPadrao(lang);
       if (p) { Narrador.ajustar({ voz: p, lang }); if (!S.cfg.voz.voz || lang.startsWith('pt')) { S.cfg.voz.voz = p; salvar(); } }
     }
-    const pos = Leitor.posicaoAtual();
+    let pos = Leitor.posicaoAtual();
+    // depois de "Pular introdução", a narração começa no início da história mesmo que ele esteja no meio da página
+    if (inicioHist && inicioHist.feito && inicioHist.id === leitorAberto.item.id && pos.c === inicioHist.r.c && pos.o <= inicioHist.r.o) pos = { ...inicioHist.r };
     alternarLimpo(false);
     await Narrador.tocar(pos.c, pos.o);
     if (!LS.get('lc-dica-narra')) { LS.set('lc-dica-narra', 1); toast('Toque numa palavra para a narração continuar dali.', 4500); }

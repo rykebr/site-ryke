@@ -180,6 +180,7 @@ function detectarIdioma(txt) {
 const ICO = {
   casa: '<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/>',
   busca: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
+  infantil: '<path d="M12 3.5l2.4 4.9 5.4.8-3.9 3.8.9 5.4L12 15.9l-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z"/><path d="M9.5 11.5c.6.9 1.5 1.3 2.5 1.3s1.9-.4 2.5-1.3"/>',
   estante: '<path d="M4 4h4v16H4zM10 4h4v16h-4z"/><path d="M16.5 4.5l3.8 1 -3.6 15.4-3.9-1z"/>',
   ia: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
   perfil: '<circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/>',

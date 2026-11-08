@@ -190,7 +190,7 @@ const Leitor = (() => {
   }
   async function medirTudo() {
     const meu = ++medindo;
-    for (let c = 0; c < L.caps.length; c++) {
+    for (let c = 0; L && c < L.caps.length; c++) {
       if (meu !== medindo || !L) return;
       if (!cols[c]) { await medir(c); await sleep(16); }
     }
@@ -670,6 +670,48 @@ const Leitor = (() => {
     }
     return { txt, blocos };
   }
+  /* ---------- início da história (para "Pular introdução") ----------
+     Pula capítulos de abertura (índice, prefácio, introdução, dedicatória, nota do editor, licença) e,
+     dentro do capítulo, os blocos de índice e créditos, até o primeiro parágrafo de história de verdade. */
+  const FRENTE = /^(capa|cover|title page|titulo|folha de rosto|rosto|sumario|indice|index|contents|table of contents|prefacio|preface|prefacio d[ao] .*|prologo d[oa] (editor|tradutor)|introducao|introduction|nota(s)?( d[oa] (editor|editora|tradutor|tradutora|autor|edicao))?|advertencia|ao leitor|aos leitores|dedicatoria|dedicacao|epigrafe|apresentacao|agradecimentos?|acknowledg.*|foreword|sobre (o|a) (autor|autora|livro|obra)|biografia|cronologia|the project gutenberg.*|project gutenberg.*|copyright|licenca|frontispiece|ilustracoes|list of illustrations|errata|obras d[oa] autor.*|do mesmo autor.*)$/;
+  const CREDITO = /project gutenberg|copyright|licen[cs]|todos os direitos|typograph|tipografia|livraria|editores?\b|impressor|imprensa nacional|isbn|erros tipogr|transcri[cç]|transcriber/i;
+  const NOTA = /^(nota d[eoa] (editor|editora|tradutor|tradutora|transcri\w*|edicao)|nota de transcricao|nota previa|nota|notas|transcriber s note|prefacio|preface|introducao|introduction|advertencia|dedicatoria|errata)\b/;
+  const nt = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  let inicioCache = null;
+  async function inicioDaHistoria() {
+    if (!L) return null;
+    if (inicioCache && inicioCache.L === L) return inicioCache.r;
+    let r = null;
+    for (let c = 0; c < Math.min(L.caps.length, 15) && !r; c++) {
+      if (L.caps.length > 1 && FRENTE.test(nt(L.caps[c].titulo))) continue;
+      const { txt, blocos } = await textoCapitulo(c);
+      if (!L) return null; // o livro foi fechado no meio
+      if (txt.replace(/\s/g, '').length < 300) continue;
+      let pulando = false;
+      const bl = blocos.map((ini, k) => ({ ini, b: txt.slice(ini, k + 1 < blocos.length ? blocos[k + 1] : txt.length).trim() })).filter((x) => x.b);
+      for (let k = 0; k < bl.length; k++) {
+        const { ini, b } = bl[k];
+        if (b.length < 90) {
+          if (FRENTE.test(nt(b))) pulando = true;
+          else if (pulando && /^(capitulo|chapter|parte|part|livro|book|canto|[ivxlcdm]+|\d+)\b/.test(nt(b)) && !(bl[k + 1] && bl[k + 1].b.length < 90 && bl[k + 2] && bl[k + 2].b.length < 90 && /^([ivxlcdm]+|\d+)\b/.test(nt(bl[k + 2].b)))) pulando = false;
+          continue;
+        }
+        if (pulando || CREDITO.test(b) || NOTA.test(nt(b.slice(0, 60)))) continue;
+        // antes do primeiro título de capítulo, texto entre aspas é nota ou epígrafe, não a história
+        if (/^[«“]/.test(b) && !bl.slice(0, k).some((x) => x.b.length < 40 && /^(capitulo|chapter|[ivxlcdm]+\.?|\d+\.?)$/.test(nt(x.b)))) continue;
+        if (b.length >= 160) {
+          // inclui até dois títulos curtos logo antes ("I" e "Do título")
+          let o = ini;
+          // (epígrafes entre aspas ou parênteses não contam como título)
+          for (let j = k - 1; j >= Math.max(0, k - 2); j--) { const t = bl[j].b; if (t.length < 90 && !FRENTE.test(nt(t)) && !CREDITO.test(t) && !/^[«"“(\[]|[»"”)\]]\.?$/.test(t)) o = bl[j].ini; else break; }
+          r = { c, o };
+          break;
+        }
+      }
+    }
+    inicioCache = { L, r };
+    return r;
+  }
   function posicaoAtual() {
     const p = paginaVisivel(pos.col);
     return { c: pos.c, o: offsetDoInicio(p) };
@@ -812,7 +854,7 @@ const Leitor = (() => {
 
   return {
     abrir, fechar, ajustar, virar, irPara, irParaPct, irParaAlvo, alternarMarcador, destacar, removerMarca, selecaoAtual,
-    textoCapitulo, posicaoAtual, mostrarDestaque, limparDestaque, offsetNoPonto, buscarNoLivro,
+    textoCapitulo, posicaoAtual, inicioDaHistoria, mostrarDestaque, limparDestaque, offsetNoPonto, buscarNoLivro,
     get livro() { return L; }, get pos() { return { ...pos }; }, get aberto() { return !!L; }, get marcas() { return marcas.slice(); }, get marcadores() { return marcadores.slice(); },
     progresso: () => (L ? { pct: pctAtual(), pag: nomePagina(pos.c, pos.col), tot: totalPaginas(), ...restante() } : null),
   };
