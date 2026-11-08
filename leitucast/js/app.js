@@ -298,6 +298,7 @@
   }
   async function logar(id) {
     contaId = id;
+    setTimeout(conferirArquivos, 5000); // depois da sincronização com a nuvem
     LS.set(K_ATUAL, id);
     S = completar(LS.get(kDados(id), null) || S || novoEstado(contas[id].nome));
     S.nome = contas[id].nome;
@@ -879,8 +880,10 @@
   }
 
   /* ================= ESTANTE: baixar, importar, abrir ================= */
-  async function baixarParaEstante(l, folha) {
-    if (S.estante[l.id] && S.estante[l.id].baixado) return true;
+  /* fonte de um livro do acervo livre (mesmo em itens antigos sem o campo src) */
+  const fonteDe = (x) => (x && (x.src || (/^(gb|ws):/.test(x.id || '') ? x.id : ''))) || '';
+  async function baixarParaEstante(l, folha, forcar) {
+    if (!forcar && S.estante[l.id] && S.estante[l.id].baixado) return true;
     if (l.conferir && l.src.startsWith('gb:')) {
       const ok = await Lia.conferirDominio(l.src.slice(3));
       if (!ok) { toast('Este livro é livre nos EUA, mas no Brasil ainda tem direitos autorais.', 4500); return false; }
@@ -902,6 +905,18 @@
     }
   }
   $('#arquivos').addEventListener('change', (e) => { const fs = Array.from(e.target.files || []); e.target.value = ''; if (fs.length) importar(fs); });
+  /* confere quais livros da estante estão mesmo neste aparelho e baixa de novo os que a pessoa está lendo */
+  async function conferirArquivos() {
+    if (!S || !S.estante) return;
+    const tem = new Set(await Banco.chaves('arquivos'));
+    const faltam = Object.values(S.estante).filter((x) => x.baixado && !tem.has(x.id));
+    if (!faltam.length) return;
+    for (const x of faltam) if (!fonteDe(x)) x.baixado = false;
+    salvar();
+    if (navigator.onLine === false) return;
+    const lendo = faltam.filter((x) => fonteDe(x) && x.status === 'lendo').sort((a, b) => (b.ultimo || 0) - (a.ultimo || 0)).slice(0, 3);
+    for (const x of lendo) { await baixarParaEstante({ ...x, src: fonteDe(x), livre: true }, null, true).catch(() => false); await sleep(400); }
+  }
   async function importar(arquivos) {
     const f = abrirFolha(`<h2>Adicionando ${plural(arquivos.length, '1 ebook', '# ebooks')}</h2><p style="color:var(--tx2);margin:0 0 14px">A Lia lê cada arquivo, descobre qual é o livro e organiza na sua estante.</p><div class="importando" id="impLista">${arquivos.map((a, i) => `<div class="imp-item" id="imp${i}"><div class="capa"><img src="${capaGerada(a.name.replace(/\.[^.]+$/, ''), '')}" alt=""></div><div><b>${esc(a.name)}</b><small class="passo"><span class="spinner" style="width:14px;height:14px;vertical-align:-2px"></span> Na fila</small></div></div>`).join('')}</div><div style="margin-top:16px"><button class="btn pri bloco" data-fechar hidden id="impOk">Ver na estante</button></div>`);
     let ok = 0;
@@ -1295,8 +1310,14 @@
       item = S.estante[l.id];
     }
     let blob = await Banco.get('arquivos', l.id);
-    if (!blob && item.src) { await baixarParaEstante({ ...item, livre: true }); blob = await Banco.get('arquivos', l.id); }
-    if (!blob) { toast('O arquivo deste livro não está neste aparelho. Importe o ebook de novo.', 4500); return; }
+    // livro do acervo livre sem o arquivo neste aparelho (estante veio da nuvem, ou o celular limpou o espaço): baixa de novo sozinho
+    const src = fonteDe(item) || fonteDe(l);
+    if (!blob && src) {
+      toast('Baixando o livro de novo neste aparelho…', 8000);
+      if (await baixarParaEstante({ ...item, ...l, src, livre: true }, null, true)) blob = await Banco.get('arquivos', l.id);
+      if (!blob) { toast('Não consegui baixar o livro agora. Confira a internet e tente de novo.', 4500); return; }
+    }
+    if (!blob) { item.baixado = false; salvar(); toast('Este é um ebook que você importou em outro aparelho. Importe o arquivo aqui também para ler.', 5000); return; }
     secLeitor.hidden = false;
     secLeitor.innerHTML = `<div class="carregando" style="color:#EDE6DA"><img src="img/logo.svg" alt="" width="56"><span>Abrindo "${esc(item.t)}"…</span></div>`;
     let L;
