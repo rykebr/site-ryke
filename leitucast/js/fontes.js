@@ -19,7 +19,8 @@ const Fontes = (() => {
       const k = 'gbq:' + norm(q);
       const c = await CacheWeb.get(k, 3);
       if (c) return c;
-      const xml = await buscar(`${PROXY_GB}ebooks/search.opds/?query=${encodeURIComponent(q)}`, { tipo: 'text', ms: 15000 });
+      // sem extensão no caminho: o site (trailingSlash da Vercel) não redireciona, e o Gutenberg aceita
+      const xml = await buscar(`${PROXY_GB}ebooks/search/?query=${encodeURIComponent(q)}&format=opds`, { tipo: 'text', ms: 15000 });
       const doc = new DOMParser().parseFromString(xml, 'application/xml');
       const out = [];
       for (const e of doc.getElementsByTagName('entry')) {
