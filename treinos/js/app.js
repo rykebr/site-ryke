@@ -124,7 +124,7 @@ async function sincronizar(){
       if(!document.activeElement||!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))show(atual,true);
       return;
     }
-    if(r&&r.erro==='sessao'){c.token=null;salvarContas();setSync('erro');toast('Sua sessão expirou. Toque no seu nome no início para entrar de novo.');return;}
+    if(r&&r.erro==='sessao'){c.token=null;salvarContas();setSync('erro');toast('Sua sessão foi encerrada. Saia em Perfil e faça login de novo.');return;}
     if(r&&r.versao){c.base=r.versao;c.sinc=enviado;salvarContas();setSync(sujo()?'pend':'ok',Date.now());if(sujo())agendarSync(1500);}
   }catch(e){setSync(e.rede?'pend':'erro');if(!e.rede)agendarSync(30000);}
   finally{syncando=false;}
@@ -180,10 +180,11 @@ const ABAS=['treino','plano','coach','evolucao','perfil'];
 let atual='inicio',diaSel=null,diaPlano=null,segEvo='exercicios',ultimaTela='';
 function show(v,manter){
   if(v!=='inicio'&&v!=='novo'&&!S)v='inicio';
+  if(v==='inicio'&&S&&S.perfil)v='treino';
   if(S&&!S.perfil&&v!=='inicio'&&v!=='novo'){if(!OB||OB.modo!=='completar')OB=obNovo('completar');v='novo';}
   const y=window.scrollY;atual=v;
   const app=!!S&&(ABAS.includes(v)||v==='calistenia');
-  $('#nav').hidden=!app;$('#bhome').hidden=!S||v==='inicio';
+  $('#nav').hidden=!app;$('#bhome').hidden=true;
   $('#titulo').textContent=S&&v!=='inicio'&&v!=='novo'?`de ${primeiro(S.perfil&&S.perfil.nome||contas[contaId]&&contas[contaId].nome)}`:'';
   $('#semchip').textContent=app&&S.plano&&diasPlano().length?`Semana ${Math.min(semana(),8)} de 8`:'';
   $('#sync').hidden=!S||!app;
@@ -238,26 +239,16 @@ setInterval(()=>{if(atual!=='inicio'||document.hidden)return;capaI++;
   const f=$('#frase');if(f){f.classList.remove('troca');void f.offsetWidth;f.textContent=FRASES[capaI%FRASES.length];f.classList.add('troca');}},6000);
 const ehHenrique=n=>normNome(n)==='henrique';
 function telaInicio(){
-  const meus=Object.entries(contas).filter(([id,c])=>c.token||c.pendente);
-  const idsMeus=new Set(meus.map(([id])=>id));
-  const outros=listaNuvem.filter(p=>!idsMeus.has(p.id)&&!ehHenrique(p.nome));
-  const atualC=S&&contas[contaId];
   let h=`<section class="capa" aria-label="Ryke Treinos"><div class="fotos">${FOTOS.map((f,i)=>`<i class="${i===capaI%FOTOS.length?'on':''}" style="background-image:url(img/fundo/${f})"></i>`).join('')}</div><div class="veu"></div>
   <div class="capa-in"><div class="logo"><img src="img/icon-192.png" alt="" width="42" height="42"><span class="marca">Ryke Sistemas</span></div>
   <h2 class="logocapa"><img src="img/logo-treinos.webp" alt="Treinos" width="900" height="454"></h2><p class="frase" id="frase">${FRASES[capaI%FRASES.length]}</p>
   <p class="desc">Treino montado por uma IA que roda no seu celular, com coach para treino e alimentação.</p>
   <div class="selos"><span>${svg('ia')} IA no aparelho</span><span>${svg('halter')} ${EX_IDS.length} exercícios animados</span><span>${svg('prato')} Cardápios na sua meta</span></div></div></section>
-  <div class="sobe">`;
-  if(atualC&&!ehHenrique(atualC.nome))h+=`<button class="destaque" type="button" data-act="continuar">${avatar(atualC.nome)}<span><b>Continuar</b><small>Treinos de ${esc(atualC.nome)}</small></span><span class="seta">›</span></button>`;
-  h+=`<button class="destaque" type="button" data-act="henrique">${avatar('Henrique')}<span><b>Treinos de Henrique</b><small>Peito, costas, ombros e braços, de segunda a sexta</small></span><span class="seta">›</span></button>`;
+  <div class="sobe"><div class="card entrada"><h3>Bem-vindo!</h3><p class="sub">Entre uma vez e o app lembra de você neste aparelho.</p>
+  <button class="btn cheio grande bloco" type="button" data-act="login">Fazer login</button>
+  <button class="btn grande bloco" type="button" data-act="novo">Criar conta nova</button></div>`;
   h+=cartaoInstalar('inicio');
-  h+=`<p class="subt">Quem vai treinar?</p><input class="busca" id="busca" type="search" placeholder="Procure seu nome e sobrenome" autocomplete="off" aria-label="Procurar nome">
-  <div class="pessoas" id="pessoas">`;
-  meus.filter(([id,c])=>!ehHenrique(c.nome)).forEach(([id,c])=>{h+=`<button class="pessoa aqui" type="button" data-act="pessoa" data-id="${esc(id)}" data-nome="${esc(normNome(c.nome))}">${avatar(c.nome)}<span><b>${esc(c.nome)}</b><small>${c.pendente?'Salvo neste aparelho':'Entra direto neste aparelho'}</small></span><span class="seta">›</span></button>`;});
-  outros.forEach(p=>{h+=`<button class="pessoa" type="button" data-act="pessoa" data-id="${esc(p.id)}" data-nome="${esc(normNome(p.nome))}">${avatar(p.nome)}<span><b>${esc(p.nome)}</b><small>Toque para entrar com sua senha</small></span><span class="seta">›</span></button>`;});
-  h+=`</div><p class="vazio" id="nenhum" ${meus.length||outros.length?'hidden':''}>${listaStatus==='carregando'?'Buscando os nomes…':'Nenhum nome encontrado. Crie sua conta abaixo.'}</p>
-  <button class="btn cheio grande" type="button" data-act="novo" style="margin-top:8px">Criar minha conta</button>
-  <p class="rodape">${listaStatus==='offline'?'Sem internet: mostrando os nomes salvos neste aparelho.<br>':''}A IA funciona sem internet depois do primeiro acesso.<br>Fotos: Unsplash.</p></div>`;
+  h+=`<p class="rodape">A IA funciona sem internet depois do primeiro acesso.<br>Fotos: Unsplash.</p></div>`;
   return h;
 }
 async function atualizarLista(){
@@ -265,22 +256,44 @@ async function atualizarLista(){
   listaStatus=listaNuvem.length?'':'carregando';
   try{const l=await Nuvem.lista();if(Array.isArray(l)){listaNuvem=l;LS.set(K_LISTA,l);listaStatus='';}}
   catch(e){listaStatus=e.rede?'offline':'';}
-  if(atual==='inicio'){const b=$('#busca'),q=b?b.value:'';show('inicio',true);const nb=$('#busca');if(nb&&q){nb.value=q;filtraPessoas(q);}}
-}
-function filtraPessoas(q){
-  const n=normNome(q);let vis=0;
-  document.querySelectorAll('#pessoas .pessoa').forEach(b=>{const ok=!n||b.dataset.nome.includes(n);b.hidden=!ok;if(ok)vis++;});
-  const nn=$('#nenhum');if(nn){nn.hidden=vis>0;nn.textContent='Nenhum nome encontrado. Crie sua conta abaixo.';}
 }
 function abrirConta(id){
   const c=contas[id];if(!c)return false;
   const dados=normal(LS.get(kDados(id),null));if(!dados)return false;
-  contaId=id;S=dados;LS.set(K_ATUAL,id);aplicaTema();diaSel=null;diaPlano=null;chatCtx={};
+  contaId=id;S=dados;LS.set(K_ATUAL,id);aplicaTema();guardarSessao();diaSel=null;diaPlano=null;chatCtx={};
   setSync(sujo()?'pend':'');
   if(location.hash.slice(1)==='treino')show('treino');else location.hash='treino';
   puxarNuvem();if(S.sessao)wake();
   return true;
 }
+function pedirLogin(msg,nome){
+  abrirDlg(`<h3>Fazer login</h3><p>Use o nome e sobrenome e a senha que você cadastrou. Você só faz isso uma vez neste aparelho.</p>
+  <form id="flogin"><label class="campo">Nome e sobrenome<input id="lnome" autocomplete="username" autocapitalize="words" maxlength="60" required value="${esc(nome||'')}"></label>
+  <label class="campo">Senha<span class="senha"><input id="isenha" type="password" autocomplete="current-password" required><button type="button" data-act="versenha">Ver</button></span></label>
+  <p class="erro" id="esenha">${msg?esc(msg):''}</p>
+  <div class="acoes" style="margin-top:12px"><button class="btn cheio" type="submit">Entrar</button><button class="btn" type="button" data-act="fechar">Cancelar</button></div></form>
+  <p class="sub" style="margin-top:12px;font-size:14px">Esqueceu a senha? Peça para o Ryke redefinir. Ainda não tem conta? <button class="linkbtn" type="button" data-act="novo">Criar conta nova</button></p>`);
+  setTimeout(()=>{const i=$(nome?'#isenha':'#lnome');if(i)i.focus();},60);
+}
+async function enviarLogin(f){
+  const nome=$('#lnome').value.trim(),senha=$('#isenha').value,e=$('#esenha'),b=f.querySelector('[type=submit]');
+  if(nome.split(/\s+/).length<1||!nome){e.textContent='Digite seu nome.';return;}
+  if(!senha){e.textContent='Digite a senha.';return;}
+  const chave=normNome(nome);
+  /* conta criada sem internet neste aparelho */
+  const local=Object.entries(contas).find(([id,c])=>normNome(c.nome)===chave&&(c.pendente||c.token));
+  if(local&&local[1].pendente){if(local[1].senha&&local[1].senha!==senha){e.textContent='Senha errada. Tente de novo.';return;}fecharDlg();abrirConta(local[0]);return;}
+  b.disabled=true;b.textContent='Entrando…';
+  const falha=m=>{b.disabled=false;b.textContent='Entrar';e.textContent=m;};
+  try{
+    let p=listaNuvem.find(x=>normNome(x.nome)===chave);
+    if(!p){const l=await Nuvem.lista();if(Array.isArray(l)){listaNuvem=l;LS.set(K_LISTA,l);}p=listaNuvem.find(x=>normNome(x.nome)===chave);}
+    if(!p)return falha('Não achei uma conta com esse nome. Confira o nome e sobrenome do jeito que você cadastrou, ou crie uma conta nova.');
+    await entrarComSenha(p.id,senha,falha);
+  }catch(err){falha(err.rede?'Sem internet. Para entrar pela primeira vez neste aparelho é preciso estar conectado.':'Não deu para entrar agora: '+err.message);}
+}
+/* guarda a sessão no aparelho: o navegador não apaga os dados quando pede espaço */
+function guardarSessao(){try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});}catch(e){}}
 function entrarPessoa(id,nome){
   if((contas[id]&&(contas[id].token||contas[id].pendente))&&abrirConta(id))return;
   pedirSenha(id,nome||(contas[id]&&contas[id].nome)||'');
@@ -292,6 +305,16 @@ function pedirSenha(id,nome,msg){
   <div class="acoes" style="margin-top:12px"><button class="btn cheio" type="submit">Entrar</button><button class="btn" type="button" data-act="fechar">Cancelar</button></div></form>
   <p class="sub" style="margin-top:12px;font-size:14px">Esqueceu a senha? Peça para o Ryke redefinir.</p>`);
   setTimeout(()=>{const i=$('#isenha');if(i)i.focus();},60);
+}
+async function entrarComSenha(id,senha,falha){
+  const r=await Nuvem.entrar(id,senha);
+  if(r&&r.erro)return falha(r.erro==='senha_errada'?'Senha errada. Tente de novo.':r.erro==='bloqueado'?'Muitas tentativas erradas. Espere 10 minutos.':'Essa conta não existe mais.');
+  const local=normal(LS.get(kDados(r.id),null)),nuv=normal(r.estado);
+  let est=local&&local.perfil?juntar(local,nuv):nuv;
+  if(!est)est=normal({perfil:null});
+  contas[r.id]={nome:r.nome,token:r.token,base:r.versao,sinc:nuv&&nuv.atualizado||0};salvarContas();
+  LS.set(kDados(r.id),est);fecharDlg();
+  abrirConta(r.id);if(sujo())sincronizar();
 }
 async function enviarSenha(f){
   const id=f.dataset.id,nome=f.dataset.nome,senha=$('#isenha').value,e=$('#esenha'),b=f.querySelector('[type=submit]');
@@ -346,7 +369,7 @@ async function criarHenrique(f){
 async function criarNaNuvem(nome,senha,est,erro){
   try{
     const r=await Nuvem.criar(nome,senha,est);
-    if(r&&r.erro){erro(r.erro==='nome_existe'?'Esse nome já tem conta. Volte ao início e toque nele para entrar.':r.erro==='senha_curta'?'Use pelo menos 3 caracteres na senha.':'Nome inválido.');return false;}
+    if(r&&r.erro){erro(r.erro==='nome_existe'?'Esse nome já tem conta. Use Fazer login na tela inicial.':r.erro==='senha_curta'?'Use pelo menos 3 caracteres na senha.':'Nome inválido.');return false;}
     contas[r.id]={nome:r.nome,token:r.token,base:r.versao,sinc:est.atualizado};salvarContas();
     LS.set(kDados(r.id),est);listaNuvem=[...listaNuvem.filter(p=>p.id!==r.id),{id:r.id,nome:r.nome}];LS.set(K_LISTA,listaNuvem);
     fecharDlg();abrirConta(r.id);setSync('ok',Date.now());return true;
@@ -964,7 +987,7 @@ function telaPerfil(){
    <tr><th>Cuidados</th><td>${esc(L(p.lesoes))}</td></tr></tbody></table>
   <div class="acoes" style="margin-top:12px"><button class="btn cheio" type="button" data-act="editarperfil">Editar meus dados</button></div></div>
   <div class="card"><h3>Conta e nuvem</h3><p id="syncstatus">${syncTexto()}</p>
-   <div class="acoes"><button class="btn" type="button" data-act="syncagora">Sincronizar agora</button>${c.token?'<button class="btn" type="button" data-act="trocasenha">Trocar senha</button>':''}<button class="btn" type="button" data-act="ir" data-v="inicio">Trocar de pessoa</button><button class="btn perigo" type="button" data-act="sair">Sair deste aparelho</button></div></div>
+   <div class="acoes"><button class="btn" type="button" data-act="syncagora">Sincronizar agora</button>${c.token?'<button class="btn" type="button" data-act="trocasenha">Trocar senha</button>':''}</div></div>
   ${cartaoInstalar('perfil')}
   <div class="card"><h3>Ajustes</h3><div class="form">
     <label class="campo">Registrar carga (kg)<select data-cfg="carga"><option value="1"${cf.carga?' selected':''}>Sim</option><option value="0"${!cf.carga?' selected':''}>Não, só repetições</option></select></label>
@@ -976,6 +999,7 @@ function telaPerfil(){
   </div><div class="acoes" style="margin-top:12px"><button class="btn" type="button" data-act="testesom">Testar aviso</button></div></div>
   <div class="card"><h3>Backup</h3><p>Seus dados já ficam na nuvem e no aparelho. O backup em arquivo é uma cópia extra. Restaurar também aceita o backup do app antigo do Henrique.</p>
    <div class="acoes"><button class="btn cheio" type="button" data-act="exportar">Baixar backup</button><button class="btn" type="button" data-act="importar">Restaurar backup</button></div></div>
+  <div class="card"><h3>Sair da conta</h3><p>Sai deste aparelho. Seus treinos continuam salvos na nuvem e voltam quando você fizer login de novo.</p><button class="btn perigo bloco" type="button" data-act="sair">Sair da conta</button></div>
   <div class="card"><h3>Excluir conta</h3><p>Apaga sua conta e todos os seus treinos da nuvem e deste aparelho. Não dá para desfazer.</p><button class="btn perigo" type="button" data-act="excluir">Excluir minha conta</button></div>`;
 }
 function telaEditar(){
@@ -1063,9 +1087,9 @@ document.addEventListener('click',e=>{
   switch(a){
     /* início e contas */
     case 'continuar':if(contaId)ir('treino');break;
-    case 'henrique':abrirHenrique();break;
+    case 'login':pedirLogin();break;
     case 'pessoa':entrarPessoa(b.dataset.id,(listaNuvem.find(p=>p.id===b.dataset.id)||contas[b.dataset.id]||{}).nome);break;
-    case 'novo':OB=obNovo();ir('novo');break;
+    case 'novo':fecharDlg();OB=obNovo();ir('novo');break;
     case 'versenha':{const i=b.parentElement.querySelector('input');if(i){i.type=i.type==='password'?'text':'password';b.textContent=i.type==='password'?'Ver':'Ocultar';}break;}
     case 'ob':{const k=b.dataset.k;let v=b.dataset.v;if(k==='tempo')v=+v;OB.d[k]=v;OB.erro='';show(atual==='editar'?'editar':'novo',true);break;}
     case 'obl':{const k=b.dataset.k;let v=b.dataset.v;if(k==='dias')v=+v;const L=OB.d[k],i=L.indexOf(v);if(i>=0)L.splice(i,1);else{if(k==='dias'&&L.length>=6){toast('Deixe pelo menos um dia de descanso.');break;}L.push(v);}
@@ -1177,11 +1201,12 @@ async function sairDoAparelho(){
   if(c&&c.token){try{await Nuvem.sair(c.token);}catch(e){}}
   if(S&&S.sessao)soltar();
   LS.del(kDados(contaId));delete contas[contaId];salvarContas();LS.del(K_ATUAL);
-  S=null;contaId=null;aplicaTema();toast('Você saiu deste aparelho.');ir('inicio');atualizarLista();
+  S=null;contaId=null;aplicaTema();toast('Você saiu da conta.');ir('inicio');atualizarLista();
 }
 document.addEventListener('submit',async e=>{
   const f=e.target;e.preventDefault();
   if(f.id==='fsenha')return enviarSenha(f);
+  if(f.id==='flogin')return enviarLogin(f);
   if(f.id==='fhenrique')return criarHenrique(f);
   if(f.id==='fob')return obAvancar();
   if(f.id==='fedit')return salvarEdicao();
@@ -1198,7 +1223,6 @@ document.addEventListener('submit',async e=>{
 });
 document.addEventListener('input',e=>{
   const i=e.target;
-  if(i.id==='busca')return filtraPessoas(i.value);
   if(i.id==='libbusca'){libBusca=i.value;document.querySelectorAll('#libabas button').forEach(x=>x.setAttribute('aria-pressed',!libBusca&&+x.dataset.i===libAba));atualizaLib();return;}
   if(i.dataset.ob&&OB){OB.d[i.dataset.ob]=i.value;return;}
   if(i.dataset.f&&S&&S.sessao){const it=S.sessao.itens[S.sessao.x],s=it&&it.sets[+i.dataset.i];if(s){s[i.dataset.f]=i.value.trim();saveLocal();}}

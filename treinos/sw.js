@@ -1,6 +1,6 @@
 // Service worker do Ryke Treinos: busca a versão nova na rede e usa a cópia salva quando estiver sem internet.
-const CACHE = 'ryke-treinos-v7';
-const V = '?v=7';
+const CACHE = 'ryke-treinos-v8';
+const V = '?v=8';
 const CORE = ['./', 'index.html', 'estilo.css' + V, 'fontes.css', 'manifest.webmanifest', 'img/icon-192.png', 'img/icon-512.png', 'img/logo-treinos.webp', 'img/logo-treinos-p.webp', 'img/favicon-32.png', 'favicon.ico',
   'js/motor.js' + V, 'js/exercicios.js' + V, 'js/conhecimento.js' + V, 'js/ia-pesos.js' + V, 'js/ia.js' + V, 'js/cerebro.js' + V, 'js/nuvem.js' + V, 'js/app.js' + V,
   'img/fundo/fundo1.webp', 'img/fundo/fundo2.webp', 'img/fundo/fundo3.webp', 'img/fundo/fundo4.webp', 'img/fundo/fundo5.webp', 'img/fundo/fundo6.webp'];

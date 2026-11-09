@@ -565,3 +565,8 @@ body.no-chat main{padding-bottom:0}
 .capa h2.logocapa img{width:min(430px,88%);height:auto;filter:drop-shadow(0 8px 26px rgba(22,102,224,.45))}
 .logotopo{height:34px;width:auto;flex:none;margin-right:2px;filter:drop-shadow(0 2px 6px rgba(5,12,31,.25))}
 @media (max-width:380px){.logotopo{height:28px}}
+
+/* ============ entrada ============ */
+.card.entrada{display:grid;gap:10px;padding:20px}
+.card.entrada h3{margin:0;font:800 26px var(--cond);color:var(--navy)}
+.card.entrada .sub{margin:0 0 4px}
