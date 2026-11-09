@@ -271,5 +271,48 @@ const Infantil = (() => {
   const porId = (id) => HISTORIAS.find((h) => h.id === id);
   const minutos = (h) => Math.max(2, Math.round(h.paginas.reduce((s, x) => s + x.t.split(/\s+/).length, 0) / 110));
 
-  return { HISTORIAS, TAGS, cena, porId, ehDe, minutos };
+  /* Livros infantis prontos e gratuitos da web (domínio público no Brasil), conferidos em novembro de 2026:
+     Wikisource em português e Project Gutenberg. Abrem no leitor normal, com narração. */
+  const W = (titulo, t, a, tag) => ({ src: 'ws:' + titulo, t, a, l: 'pt', tag, fonte: 'Wikisource' });
+  const G = (id, t, a, l, tag) => ({ src: 'gb:' + id, t, a, l, tag, fonte: 'Project Gutenberg' });
+  const ACERVO = [
+    W('A Menina do Narizinho Arrebitado', 'A Menina do Narizinho Arrebitado', 'Monteiro Lobato', 'Sítio do Picapau Amarelo · ilustrado'),
+    W('As Reinações de Narizinho', 'As Reinações de Narizinho', 'Monteiro Lobato', 'Sítio do Picapau Amarelo'),
+    W('Fabulas de Narizinho', 'Fábulas de Narizinho', 'Monteiro Lobato', 'Fábulas'),
+    W('Fabulas (9ª edição)', 'Fábulas', 'Monteiro Lobato', 'Fábulas'),
+    W('As Caçadas de Pedrinho', 'As Caçadas de Pedrinho', 'Monteiro Lobato', 'Sítio do Picapau Amarelo'),
+    W('O Saci (8ª edição)', 'O Saci', 'Monteiro Lobato', 'Sítio do Picapau Amarelo'),
+    W('A Reforma da Natureza (12ª edição)', 'A Reforma da Natureza', 'Monteiro Lobato', 'Sítio do Picapau Amarelo'),
+    W('Peter Pan (Lobato, 1935)', 'Peter Pan', 'J. M. Barrie (tradução de Monteiro Lobato)', 'Aventura'),
+    W('Alice no País das Maravilhas (Trad. Lobato, 8ª edição)', 'Alice no País das Maravilhas', 'Lewis Carroll (tradução de Monteiro Lobato)', 'Fantasia'),
+    W('O Conto de Peter Rabbit', 'O Conto de Peter Rabbit', 'Beatrix Potter', 'Bichinhos · ilustrado'),
+    W('O Conto de Jemima Puddle-Duck', 'O Conto de Jemima Puddle-Duck', 'Beatrix Potter', 'Bichinhos · ilustrado'),
+    W('O Conto do Sr. Jeremy Fisher', 'O Conto do Sr. Jeremy Fisher', 'Beatrix Potter', 'Bichinhos · ilustrado'),
+    W('O Conto da Sra. Tittlemouse', 'O Conto da Sra. Tittlemouse', 'Beatrix Potter', 'Bichinhos · ilustrado'),
+    W('Através do Brasil', 'Através do Brasil', 'Olavo Bilac e Manoel Bomfim', 'Aventura pelo Brasil'),
+    G(16429, 'Contos para a Infância', 'Guerra Junqueiro', 'pt', 'Contos escolhidos'),
+    G(30510, 'Pérolas e Diamantes: Contos Infantis', 'Irmãos Grimm', 'pt', 'Contos de fadas'),
+    G(69239, 'Era uma vez...', 'Júlia Lopes de Almeida', 'pt', 'Contos'),
+    G(14838, 'The Tale of Peter Rabbit', 'Beatrix Potter', 'en', 'Inglês · ilustrado'),
+    G(14220, 'The Tale of the Flopsy Bunnies', 'Beatrix Potter', 'en', 'Inglês · ilustrado'),
+    G(14837, 'The Tale of Tom Kitten', 'Beatrix Potter', 'en', 'Inglês · ilustrado'),
+    G(15284, 'The Tale of Johnny Town-Mouse', 'Beatrix Potter', 'en', 'Inglês · ilustrado'),
+    G(19994, 'The Aesop for Children', 'Esopo', 'en', 'Fábulas · ilustrado'),
+    G(11757, 'The Velveteen Rabbit', 'Margery Williams', 'en', 'Inglês · ilustrado'),
+    G(15661, 'The Golden Goose Book', 'L. Leslie Brooke', 'en', 'Contos · ilustrado'),
+    G(17208, 'The Tales of Mother Goose', 'Charles Perrault', 'en', 'Contos de fadas'),
+    G(25609, "A Child's Garden of Verses", 'Robert Louis Stevenson', 'en', 'Poesia'),
+    G(2781, 'Just So Stories', 'Rudyard Kipling', 'en', 'Contos · ilustrado'),
+    G(500, 'The Adventures of Pinocchio', 'Carlo Collodi', 'en', 'Aventura'),
+    G(236, 'The Jungle Book', 'Rudyard Kipling', 'en', 'Aventura'),
+    G(1597, "Andersen's Fairy Tales", 'Hans Christian Andersen', 'en', 'Contos de fadas'),
+    G(2591, "Grimms' Fairy Tales", 'Irmãos Grimm', 'en', 'Contos de fadas'),
+    G(11, "Alice's Adventures in Wonderland", 'Lewis Carroll', 'en', 'Fantasia'),
+    G(16, 'Peter Pan', 'J. M. Barrie', 'en', 'Aventura'),
+    G(55, 'The Wonderful Wizard of Oz', 'L. Frank Baum', 'en', 'Fantasia'),
+  ];
+  /* nada de conteúdo adulto nas buscas infantis */
+  const PROIBIDO = /erot|sex|lust|porn|amour|venus|nud|sadom|prostitu|libertin|crime|murder|assassin|horror|terror/i;
+
+  return { HISTORIAS, TAGS, ACERVO, PROIBIDO, cena, porId, ehDe, minutos };
 })();

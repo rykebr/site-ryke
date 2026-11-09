@@ -673,24 +673,84 @@
   let tagInfantil = 'todas';
   async function telaInfantil() {
     tela.className = 'tela infantil';
-    const cards = () => Infantil.HISTORIAS.filter((h) => Infantil.ehDe(h, tagInfantil)).map((h) => `<button class="kid-card" data-historinha="${esc(h.id)}" style="--cor:${h.cor}"><div class="kid-capa">${Infantil.cena(h.capa)}</div><b>${esc(h.t)}</b><small>${esc(h.tag)} · ${Infantil.minutos(h)} min</small></button>`).join('');
-    tela.innerHTML = `<div class="miolo"><div class="kid-topo"><div><h1>Cantinho das Historinhas</h1><p>Historinhas com desenhos para ler junto ou ouvir, com a palavra acendendo.</p></div></div>
+    const cards = () => Infantil.HISTORIAS.filter((h) => Infantil.ehDe(h, tagInfantil)).map(cardHistorinha).join('');
+    const pt = Infantil.ACERVO.filter((x) => x.l === 'pt').map(livroInfantil);
+    const en = Infantil.ACERVO.filter((x) => x.l !== 'pt').map(livroInfantil);
+    tela.innerHTML = `<div class="miolo"><div class="kid-topo"><div><h1>Cantinho das Historinhas</h1><p>Historinhas com desenhos, clássicos infantis grátis da web e uma busca só de livros para crianças.</p></div></div>
+      <form class="busca kid-busca" id="kidBusca">${ico('busca')}<input name="q" placeholder="Procurar historinhas: Chapeuzinho, fábulas, Narizinho…" autocomplete="off" enterkeyhint="search"></form>
+      <div id="kidRes"></div>
+      <div class="titulo-sec"><div><h2>Historinhas ilustradas</h2><p>Para ler junto ou ouvir, uma página por vez</p></div></div>
       <div class="chips kid-tags">${Infantil.TAGS.map(([k, n]) => `<button class="chip" data-tag="${k}" aria-pressed="${k === tagInfantil}">${n}</button>`).join('')}</div>
       <div class="kid-grade" id="kidGrade">${cards()}</div>
+      ${secao('Clássicos infantis em português', 'Monteiro Lobato, Beatrix Potter, Grimm e mais, grátis e com narração')}${prateleira(pt, { gratis: true })}
+      ${secao('Livrinhos ilustrados em inglês', 'Com as ilustrações originais, ótimos para aprender inglês junto')}${prateleira(en, { gratis: true })}
       <div id="kidAcervo"></div></div>`;
+    hidratarCapas(tela);
     tela.onclick = (e) => {
       const t = e.target.closest('[data-tag]');
       if (t) { tagInfantil = t.dataset.tag; $$('[data-tag]', tela).forEach((x) => x.setAttribute('aria-pressed', String(x === t))); $('#kidGrade').innerHTML = cards(); return; }
       const h = e.target.closest('[data-historinha]');
       if (h) abrirHistorinha(h.dataset.historinha);
     };
-    // livrinhos clássicos do acervo livre (só infantis, nunca conteúdo adulto)
+    const form = $('#kidBusca');
+    form.onsubmit = (e) => { e.preventDefault(); const q = form.q.value.trim(); if (q) buscarInfantil(q); };
+    // livrinhos do acervo livre (só infantis, nunca conteúdo adulto)
     try {
       await Lia.catalogo();
       const r = Lia.buscarLocal('livros infantis', { perfil: { idiomas: ['pt', 'en'], generos: ['infantil'] } });
-      const lv = r.livres.filter((l) => (l.g || []).includes('infantil') && !(l.g || []).includes('erotico')).slice(0, 18);
-      if (lv.length && $('#kidAcervo')) { $('#kidAcervo').innerHTML = secao('Livrinhos clássicos do acervo', 'Contos de fadas e clássicos infantis em domínio público, com as ilustrações originais') + prateleira(lv, { gratis: true }); hidratarCapas($('#kidAcervo')); }
+      const ja = new Set(Infantil.ACERVO.map((x) => x.src));
+      const lv = r.livres.filter((l) => ehInfantilSeguro(l) && !ja.has(l.src)).slice(0, 18);
+      if (lv.length && $('#kidAcervo')) { $('#kidAcervo').innerHTML = secao('Mais do acervo livre', 'Contos de fadas e clássicos infantis em domínio público') + prateleira(lv, { gratis: true }); hidratarCapas($('#kidAcervo')); }
     } catch (e) { /* sem acervo agora */ }
+  }
+  const cardHistorinha = (h) => `<button class="kid-card" data-historinha="${esc(h.id)}" style="--cor:${h.cor}"><div class="kid-capa">${Infantil.cena(h.capa)}</div><b>${esc(h.t)}</b><small>${esc(h.tag)} · ${Infantil.minutos(h)} min</small></button>`;
+  const livroInfantil = (x) => ({ id: x.src, src: x.src, t: x.t, a: x.a, l: x.l, g: ['infantil'], pal: 0, d: 0, livre: true, fonte: x.fonte, motivo: x.tag, sin: x.tag, capa: x.src.startsWith('gb:') ? Fontes.gutenberg.capa(x.src.slice(3)) : '' });
+  const ehInfantilSeguro = (l) => !(l.g || []).includes('erotico') && !Infantil.PROIBIDO.test(`${l.t} ${(l.s || []).join(' ')}`);
+  /* busca de historinhas: as nossas, o acervo infantil curado, o acervo livre (só infantis) e a web (Wikisource e Gutenberg) */
+  let buscaKid = 0;
+  async function buscarInfantil(q) {
+    const meu = ++buscaKid;
+    const el = $('#kidRes');
+    if (!el) return;
+    el.innerHTML = `<div class="titulo-sec"><div><h2>Procurando "${esc(q)}"</h2><p>Nas historinhas, no acervo infantil e na web</p></div><span class="spinner"></span></div>`;
+    const nq = norm(q), toks = nq.split(' ').filter((w) => w.length > 2);
+    const bate = (s) => { const n = norm(s); return toks.length ? toks.some((w) => n.includes(w)) : n.includes(nq); };
+    // historinha: qualquer palavra no título, ou todas as palavras no texto
+    const todas = (s) => { const n = norm(s); return toks.length > 0 && toks.every((w) => n.includes(w)); };
+    const historias = Infantil.HISTORIAS.filter((h) => bate(h.t + ' ' + h.tag) || todas(h.paginas.map((p) => p.t).join(' ')));
+    const curados = Infantil.ACERVO.filter((x) => bate(`${x.t} ${x.a} ${x.tag}`)).map(livroInfantil);
+    const pintar = (web) => {
+      if (meu !== buscaKid || !$('#kidRes')) return;
+      const vistos = new Set();
+      const livros = [...curados, ...web].filter((l) => !vistos.has(l.src || l.id) && vistos.add(l.src || l.id));
+      const partes = [];
+      if (historias.length) partes.push(secao('Historinhas ilustradas', '') + `<div class="kid-grade">${historias.map(cardHistorinha).join('')}</div>`);
+      if (livros.length) partes.push(secao('Livros e contos infantis grátis', `${plural(livros.length, '1 livro', '# livros')} em domínio público. Toque para baixar e ler ou ouvir.`) + `<div class="grade">${livros.slice(0, 30).map((l) => livroCard(l, { gratis: true })).join('')}</div>`);
+      if (!partes.length) partes.push(`<div class="vazio">Não achei historinhas com "${esc(q)}". Tente outra palavra, como "fábula", "fadas" ou o nome do personagem.</div>`);
+      $('#kidRes').innerHTML = partes.join('');
+      hidratarCapas($('#kidRes'));
+    };
+    pintar([]);
+    const web = [];
+    try {
+      await Lia.catalogo();
+      // acervo livre: só o que é infantil
+      const r = Lia.buscarLocal(q, { perfil: { idiomas: ['pt', 'en', 'es', 'fr'], generos: ['infantil'] } });
+      for (const l of [...(r.melhor && r.melhor.livro ? [r.melhor.livro] : []), ...r.livres]) if ((l.g || []).includes('infantil') && ehInfantilSeguro(l)) web.push(l);
+      const r2 = Lia.buscarLocal(q + ' infantil', { perfil: { idiomas: ['pt', 'en'], generos: ['infantil'] } });
+      for (const l of r2.livres.slice(0, 12)) if (ehInfantilSeguro(l) && bate(l.t + ' ' + (l.a || ''))) web.push(l);
+      pintar(web);
+    } catch (e) { /* sem acervo */ }
+    // web: Wikisource em português e Gutenberg (pedindo livros infantis)
+    const tarefas = [
+      Fontes.wikisource.buscar(q).then((lst) => {
+        for (const x of lst.slice(0, 8)) if (bate(x.titulo) && !Infantil.PROIBIDO.test(x.titulo + ' ' + x.trecho)) web.push({ id: 'ws:' + x.titulo, src: 'ws:' + x.titulo, t: x.titulo, a: '', l: 'pt', g: ['infantil'], pal: x.palavras, d: 0, livre: true, fonte: 'Wikisource', sin: x.trecho, capa: '' });
+      }).catch(() => null),
+      Fontes.gutenberg.buscar(q + ' children').then((lst) => {
+        for (const x of lst.slice(0, 12)) if (!Infantil.PROIBIDO.test(x.t + ' ' + x.a)) web.push({ id: 'gb:' + x.id, src: 'gb:' + x.id, t: x.t, a: x.a, l: x.l || 'en', g: ['infantil'], pal: 0, d: 0, livre: true, conferir: true, fonte: 'Project Gutenberg', capa: Fontes.gutenberg.capa(x.id) });
+      }).catch(() => null),
+    ];
+    await Promise.all(tarefas.map((t) => t.then(() => pintar(web))));
   }
   function abrirHistorinha(id) {
     const h = Infantil.porId(id);
@@ -881,6 +941,7 @@
 
   /* ================= ESTANTE: baixar, importar, abrir ================= */
   /* fonte de um livro do acervo livre (mesmo em itens antigos sem o campo src) */
+  const memArquivos = new Map();
   const fonteDe = (x) => (x && (x.src || (/^(gb|ws):/.test(x.id || '') ? x.id : ''))) || '';
   async function baixarParaEstante(l, folha, forcar) {
     if (!forcar && S.estante[l.id] && S.estante[l.id].baixado) return true;
@@ -892,6 +953,7 @@
     if (box) box.innerHTML = `<div class="baixando"><span class="spinner"></span><div class="barra-prog"><i id="barBaixa" style="width:3%"></i></div><small id="txtBaixa">Baixando…</small></div>`;
     try {
       const blob = await Fontes.baixarLivro(l.src, (p, n) => { const b = box && $('#barBaixa', box); if (b) b.style.width = Math.max(3, Math.round(p * 100)) + '%'; const t = box && $('#txtBaixa', box); if (t) t.textContent = (n / 1048576).toFixed(1) + ' MB'; });
+      memArquivos.set(l.id, blob); // se o navegador recusar guardar (Safari privado, pouco espaço), o livro abre da memória
       await Banco.set('arquivos', l.id, blob);
       const ant = S.estante[l.id];
       S.estante[l.id] = { ...(ant || {}), id: l.id, src: l.src, t: l.t, a: l.a, aid: l.aid, l: l.l, g: l.g, capa: l.capa, fonte: l.fonte, pal: l.pal, sin: l.sin, ano: l.ano, tpt: l.tpt, add: (ant && ant.add) || Date.now(), status: ant && ant.status !== 'quero' ? ant.status : 'novo', baixado: true, livre: true };
@@ -1309,12 +1371,12 @@
       if (!ok) return;
       item = S.estante[l.id];
     }
-    let blob = await Banco.get('arquivos', l.id);
+    let blob = (await Banco.get('arquivos', l.id)) || memArquivos.get(l.id);
     // livro do acervo livre sem o arquivo neste aparelho (estante veio da nuvem, ou o celular limpou o espaço): baixa de novo sozinho
     const src = fonteDe(item) || fonteDe(l);
     if (!blob && src) {
       toast('Baixando o livro de novo neste aparelho…', 8000);
-      if (await baixarParaEstante({ ...item, ...l, src, livre: true }, null, true)) blob = await Banco.get('arquivos', l.id);
+      if (await baixarParaEstante({ ...item, ...l, src, livre: true }, null, true)) blob = (await Banco.get('arquivos', l.id)) || memArquivos.get(l.id);
       if (!blob) { toast('Não consegui baixar o livro agora. Confira a internet e tente de novo.', 4500); return; }
     }
     if (!blob) { item.baixado = false; salvar(); toast('Este é um ebook que você importou em outro aparelho. Importe o arquivo aqui também para ler.', 5000); return; }

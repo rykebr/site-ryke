@@ -14,7 +14,17 @@ const Leitor = (() => {
   const tamCap = [];
   let charsPorPagina = 1500;
   let pg = {};
-  let animando = false, fila = null;
+  let animando = false, fila = null, animandoDesde = 0;
+  /* a trava de animação nunca fica presa: se passar de 2,5 s (toque que o navegador "engoliu"), solta sozinha */
+  function travar() { animando = true; animandoDesde = performance.now(); }
+  function destravarSePreso() {
+    if (animando && performance.now() - animandoDesde > 2500) { animando = false; try { encerrarFolha(); pintarAtual(); } catch (e) { /* nada */ } }
+  }
+  async function esperarAnimacao(max = 1600) {
+    const t0 = performance.now();
+    while (animando && performance.now() - t0 < max) await sleep(40);
+    destravarSePreso();
+  }
   let medindo = 0;
   let paginaDesde = Date.now();
   let ppm = 230;
@@ -315,11 +325,12 @@ const Leitor = (() => {
   }
   async function virar(dir, alvoForcado, rapido) {
     if (!L) return false;
+    destravarSePreso();
     if (animando) { fila = dir; return false; }
     const alvo = alvoForcado || (dir > 0 ? await alvoFrente() : await alvoTras());
     if (!alvo) { if (dir > 0) ops.aoFim && ops.aoFim(); return false; }
     registrarTempo();
-    animando = true;
+    travar();
     try {
       const modo = matchMedia('(prefers-reduced-motion: reduce)').matches && cfg.virar === 'folha' ? 'deslizar' : cfg.virar;
       if (modo === 'folha' && !rapido) {
@@ -352,6 +363,7 @@ const Leitor = (() => {
     const palco = $('#ltPalco', raiz);
     let g = null, toque = 0;
     palco.addEventListener('pointerdown', (e) => {
+      destravarSePreso();
       if (e.button > 0 || animando) return;
       if (e.target.closest('a,button,.lt-menu-sel')) return;
       g = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId, arrastando: false, dir: 0, alvo: null, pronto: null };
@@ -369,7 +381,7 @@ const Leitor = (() => {
         g.dir = dx < 0 ? 1 : -1;
         try { palco.setPointerCapture(e.pointerId); } catch (er) { /* sem captura */ }
         if (cfg.virar === 'folha') {
-          animando = true;
+          travar();
           g.pronto = (g.dir > 0 ? alvoFrente() : alvoTras()).then(async (alvo) => {
             g.alvo = alvo;
             if (alvo) {
@@ -421,6 +433,7 @@ const Leitor = (() => {
     };
     palco.addEventListener('pointerup', solta);
     palco.addEventListener('pointercancel', solta);
+    palco.addEventListener('lostpointercapture', (e) => { if (g && g.arrastando) solta(e); });
     palco.addEventListener('wheel', (e) => {
       if (Math.abs(e.deltaY) < 8 && Math.abs(e.deltaX) < 8) return;
       e.preventDefault();
@@ -463,15 +476,15 @@ const Leitor = (() => {
     let a = 0, b = mapa.length - 1, achou = -1;
     while (a <= b) {
       const m = (a + b) >> 1;
-      const n = mapa[m].n;
-      if (!n.nodeValue.trim()) { // nós vazios: anda até um com texto
-        let k = m; while (k < b && !mapa[k].n.nodeValue.trim()) k++;
-        if (k === m || !mapa[k].n.nodeValue.trim()) { b = m - 1; continue; }
-      }
-      const rr = document.createRange(); rr.selectNodeContents(n);
+      // nós só com espaço não têm posição na tela: usa o próximo nó com texto (antes eles puxavam a busca
+      // para o começo do capítulo, e a narração e o progresso saíam do lugar errado)
+      let k = m;
+      while (k <= b && !mapa[k].n.nodeValue.trim()) k++;
+      if (k > b) { b = m - 1; continue; }
+      const rr = document.createRange(); rr.selectNodeContents(mapa[k].n);
       const rs = rr.getClientRects();
       const ult = rs[rs.length - 1];
-      if (ult && ult.right <= jr.left + 1) a = m + 1; else { achou = m; b = m - 1; }
+      if (!ult || ult.right <= jr.left + 1) a = k + 1; else { achou = k; b = m - 1; }
     }
     if (achou < 0) return 0;
     const n = mapa[achou].n;
@@ -718,7 +731,9 @@ const Leitor = (() => {
   }
   async function mostrarDestaque(c, ini, fim, frase) {
     if (!L) return;
-    if (animando) return;
+    // a narração não desiste de virar a página: espera a animação em andamento terminar
+    if (animando) await esperarAnimacao();
+    if (!L || animando) return;
     let col = await colunaDoOffset(c, ini);
     const visivel = c === pos.c && col >= pos.col && col < pos.col + ppv();
     if (!visivel) {
@@ -793,11 +808,11 @@ const Leitor = (() => {
 
   /* ================= abrir e fechar ================= */
   let ajusteT = 0;
-  async function reajustar() {
+  async function reajustar(forcar) {
     if (!L) return;
     const o = offsetDoInicio(paginaVisivel(pos.col));
     const c = pos.c;
-    if (!calcularGeo()) { await pintarAtual(); return; }
+    if (!calcularGeo() && forcar !== true) { await pintarAtual(); return; }
     cols.length = 0;
     [pg.E, pg.D, pg.S, pg.F, pg.V, pg.M].forEach((p) => { p.cap = -1; });
     await medir(c);
@@ -806,6 +821,7 @@ const Leitor = (() => {
     medirTudo();
   }
   const aoRedimensionar = () => { clearTimeout(ajusteT); ajusteT = setTimeout(reajustar, 180); };
+  const aoFontes = () => { clearTimeout(ajusteT); ajusteT = setTimeout(() => reajustar(true), 180); };
 
   async function abrir(livro, dados, el, opcoes = {}) {
     fechar();
@@ -824,11 +840,17 @@ const Leitor = (() => {
     calcularGeo();
     const p0 = opcoes.posicao || { c: 0, o: 0 };
     const c0 = clamp(p0.c || 0, 0, L.caps.length - 1);
+    // espera a fonte do livro carregar antes de medir as páginas (senão as linhas mudam depois e cortam palavras)
+    try { await Promise.race([document.fonts.ready, sleep(1500)]); } catch (e) { /* navegador sem a API */ }
+    if (!L) return;
     await medir(c0);
     pos = { c: c0, col: p0.o ? inicioSpread(await colunaDoOffset(c0, p0.o)) : 0 };
     await pintarAtual();
     paginaDesde = Date.now();
     addEventListener('resize', aoRedimensionar);
+    // iPhone: a barra do Safari aparece e some mudando a altura útil; e fontes que chegam depois mudam as linhas
+    if (window.visualViewport) visualViewport.addEventListener('resize', aoRedimensionar);
+    try { document.fonts.addEventListener('loadingdone', aoFontes); } catch (e) { /* sem a API */ }
     addEventListener('keydown', teclas);
     setTimeout(medirTudo, 400);
   }
@@ -839,6 +861,8 @@ const Leitor = (() => {
     try { const o = offsetDoInicio(paginaVisivel(pos.col)); ops.aoSalvar && ops.aoSalvar({ c: pos.c, o, pct: pctAtual(), pag: nomePagina(pos.c, pos.col), tot: totalPaginas(), ppm: Math.round(ppm) }); } catch (e) { /* tela já saiu */ }
     medindo++;
     removeEventListener('resize', aoRedimensionar);
+    if (window.visualViewport) visualViewport.removeEventListener('resize', aoRedimensionar);
+    try { document.fonts.removeEventListener('loadingdone', aoFontes); } catch (e) { /* sem a API */ }
     removeEventListener('keydown', teclas);
     try { L.liberar && L.liberar(); } catch (e) { /* nada */ }
     L = null;
