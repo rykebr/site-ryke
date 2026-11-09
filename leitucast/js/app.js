@@ -1152,6 +1152,7 @@
       else if (ac === 'abrir' || ac === 'ouvir') { const l = REG.get(a.dataset.id) || S.estante[a.dataset.id]; if (l) abrirLivro(l, { ouvir: ac === 'ouvir' }); }
       else if (ac === 'detalhe') abrirDetalhe(REG.get(a.dataset.id));
       else if (ac === 'ir') ir(a.dataset.nome);
+      else if (ac === 'link' && /^https:\/\//.test(a.dataset.nome)) window.open(a.dataset.nome, '_blank', 'noopener');
     };
   }
   function msgLia(r) {

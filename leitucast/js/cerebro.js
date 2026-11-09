@@ -128,13 +128,45 @@ const Cerebro = (() => {
   /* tira as palavras de pergunta para sobrar o título ("do que fala dom casmurro" → "dom casmurro") */
   const PERGUNTA = /\b(do que (fala|se trata|trata)|sobre o que (e|fala)|qual a historia d[eoa]|historia d[eoa]|sinopse d[eoa]|resumo d[aeo] livro|resumo d[aeo]|vale a pena (ler)?|e bom|e boa|e legal|recomenda (o|a)|quem escreveu|de quem e|quem e o autor d[eoa]|autor d[eoa]|quantas paginas tem|quantas paginas|tamanho d[eoa]|quanto tempo (leva|demora) (pra|para) ler|e longo|e curto|de que ano e|quando foi (escrito|publicado)|tem filme d[eoa]|tem filme|e dificil|e gratis|e de graca|tem de graca|e gratuito|esta livre|e livre|posso ler|quero ler|me fala (sobre|de|do|da)|me conta (sobre|de|do|da)|o livro|livro|lia|voce conhece|conhece)\b/g;
   const OPINIAO_PALAVRAS = /\b(amei|adorei|gostei|curti|odiei|detestei|achei|acho|eu|muito|demais|nao|chato|chata|cansativo|cansativa|lindo|linda|incrivel|perfeito|perfeita|horrivel|ruim|bom|boa|otimo|otima|o final|final|terminei|li|lendo|estou|to|resume|resumo|resumir|faz um|faca um|me da um|completo|inteiro|todo|com spoiler|sem spoiler|voce|vc|acha|achou|opiniao|sua|qual|conversar|falar|vamos|bora|quero|pensa|sobre)\b/g;
+  /* o título achado precisa cobrir as palavras do pedido: "senhor dos aneis" não é "Senhora" só porque
+     "senhor" parece "senhora" (sobrou "aneis" sem par). Apelidos e personagens (CHAVES) também contam. */
+  let chavesPorSrc = null;
+  function cobre(resto, l) {
+    const pal = resto.split(' ').filter((w) => w.length >= 3 && !PARADAS.has(w) && !GENERICO.has(w));
+    if (pal.length < 2) return true;
+    if (!chavesPorSrc && typeof Saber !== 'undefined') { chavesPorSrc = new Map(); for (const [ks, src] of Saber.CHAVES || []) chavesPorSrc.set(src, [...(chavesPorSrc.get(src) || []), ...ks.map(norm)]); }
+    const alvo = new Set(norm([l.t, l.tpt, l.o, l.a, ...((chavesPorSrc && chavesPorSrc.get(l.src)) || [])].filter(Boolean).join(' ')).split(' ').filter(Boolean));
+    const casa = (w) => [...alvo].some((x) => x === w || (w.length >= 4 && x.startsWith(w)) || (w.length >= 5 && distancia(x, w, 1) <= 1));
+    return pal.filter(casa).length / pal.length >= 0.67;
+  }
+
+  /* obras famosas fora do acervo (Saber.OBRAS): reconhece pelo título, com um erro de digitação por palavra */
+  let obrasIdx = null;
+  function acharObra(n, nucleo) {
+    if (typeof Saber === 'undefined' || !Saber.OBRAS) return null;
+    if (!obrasIdx) obrasIdx = Saber.OBRAS.flatMap((o) => o.al.map((al) => ({ o, estrito: al.startsWith('!'), p: norm(al.replace(/^!/, '')).split(' ') })));
+    const nt = n.split(' ');
+    const igual = (x, y) => x === y || (y.length >= 5 && x.length >= 4 && distancia(x, y, 1) <= 1);
+    let melhor = null;
+    for (const it of obrasIdx) {
+      if (it.estrito) { if (nucleo !== it.p.join(' ')) continue; }
+      else {
+        let ok = false;
+        for (let i = 0; i + it.p.length <= nt.length && !ok; i++) ok = it.p.every((w, j) => igual(nt[i + j], w));
+        if (!ok) continue;
+      }
+      const tam = it.p.join(' ').length;
+      if (!melhor || tam > melhor.tam) melhor = { o: it.o, tam };
+    }
+    return melhor ? melhor.o : null;
+  }
   function detectarLivro(n) {
     if (typeof Lia === 'undefined' || !Lia.buscarLocal) return null;
     const resto = n.replace(PERGUNTA, ' ').replace(new RegExp(NEGATIVO.source, 'g'), ' ').replace(new RegExp(POSITIVO.source, 'g'), ' ').replace(OPINIAO_PALAVRAS, ' ').replace(/[?!.]/g, ' ').replace(/\s+/g, ' ').trim();
     if (!resto || resto.split(' ').length > 9) return null;
     try {
       const r = Lia.buscarLocal(resto, {});
-      if (r.melhor && r.melhor.tipo === 'livro' && (r.melhor.livro.rel || 0) >= PC.livroMin) return r.melhor.livro;
+      if (r.melhor && r.melhor.tipo === 'livro' && (r.melhor.livro.rel || 0) >= PC.livroMin && cobre(resto, r.melhor.livro)) return r.melhor.livro;
     } catch (e) { /* sem acervo ainda */ }
     return null;
   }
@@ -174,6 +206,16 @@ const Cerebro = (() => {
     if (tem('significado')) {
       const m = n.match(/(?:significa|quer dizer|significado d[aeo]|definicao d[aeo]|palavra|termo)\s+["“]?([\p{L}-]+)/u);
       return R('significado', { palavra: m ? m[1] : '' });
+    }
+    // obra famosa que não está no acervo (O Senhor dos Anéis, Harry Potter, 1984...)
+    const nucleoDe = (x) => x.replace(PERGUNTA, ' ').replace(new RegExp(RX.recomendar.source, 'g'), ' ').replace(new RegExp(RX.parecido.source, 'g'), ' ').replace(/\b(um|uma|uns|umas|o|a|os|as|de|do|da|dos|das|livro|livros|me|pra|para|mim|sobre|algo|tipo|como)\b/g, ' ').replace(/[?!.]/g, ' ').replace(/\s+/g, ' ').trim();
+    const nucleo = nucleoDe(n);
+    // procura no texto como a pessoa escreveu (o corretor mexe em títulos em inglês, como "lord of the rings")
+    const nucleo0 = nucleoDe(n0);
+    const obra = acharObra(n0, nucleo0) || acharObra(n, nucleo);
+    if (obra) {
+      const modo = tem('parecido') || /\b(tipo|igual|estilo|parecid\w*|pegada|semelhante)\b/.test(n) || tem('recomendar') || /\blivros? (de|do|da|como)\b/.test(n) ? 'parecido' : tem('gratis') ? 'gratis' : 'info';
+      return R('obra', { obra, modo });
     }
     const livro = detectarLivro(n) || (tem('contexto') && c.livro) || null;
     const autor = detectarAutor(n) || (tem('contexto') && c.autor) || null;
@@ -452,6 +494,47 @@ const Cerebro = (() => {
     return cartao('Sobre qual livro ou autor você quer conversar?');
   }
 
+  /* clássicos grátis do acervo com a mesma pegada de uma obra famosa */
+  async function similaresObra(o, est) {
+    try { await Lia.catalogo(); } catch (e) { return []; }
+    const perfil = { ...((est && est.perfil) || {}), idiomas: ['pt', 'en', 'es', 'fr', 'it', 'de'], generos: [] };
+    const out = [], vistos = new Set();
+    const titulo = (l) => norm(l.tpt || l.t).replace(/[:;(].*$/, '').trim();
+    const add = (l) => { if (!l || !l.livre || ((l.g || []).includes('erotico') && !(o.g || []).includes('erotico'))) return; const k = titulo(l); if (vistos.has(k)) return; vistos.add(k); out.push(l); };
+    for (const q of o.sim || []) {
+      try {
+        const r = Lia.buscarLocal(q, { perfil });
+        const l = r.melhor && r.melhor.tipo === 'livro' ? r.melhor.livro : r.livres[0];
+        const qw = q.split(' ').filter((w) => w.length >= 4);
+        if (l && qw.some((w) => norm(l.t + ' ' + (l.tpt || '')).includes(w))) add(l);
+      } catch (e) { /* segue */ }
+      if (out.length >= 8) break;
+    }
+    if (out.length < 4) {
+      const G = (KB.GENEROS || []).find((g) => g.id === (o.g || [])[0]);
+      if (G) { try { for (const l of Lia.buscarLocal(G.nome, { perfil: { ...perfil, generos: [G.id] } }).livres) { add(l); if (out.length >= 8) break; } } catch (e) { /* segue */ } }
+    }
+    return out;
+  }
+  async function respostaObra(C, est) {
+    const o = C.obra;
+    const ano = new Date().getFullYear();
+    const livre = o.morte && ano >= o.morte + 71;
+    const dir = livre ? `Já está em domínio público no Brasil (${o.a} morreu em ${o.morte}), mas ainda não tenho uma edição grátis dele no acervo.`
+      : o.morte ? `Ainda tem direitos autorais no Brasil: ${o.a} morreu em ${o.morte}, e a obra só fica livre em ${o.morte + 71}. Por isso não está grátis aqui, mas dá para ver a amostra oficial e onde comprar.`
+        : `É um livro com direitos autorais (${o.a} ainda está vivo), então não está grátis aqui, mas dá para ver a amostra oficial e onde comprar.`;
+    const sims = await similaresObra(o, est);
+    const G = (KB.GENEROS || []).find((g) => g.id === (o.g || [])[0]) || null;
+    ctx.ultimo = { humor: [], genero: G, idioma: null, curto: false, q: G ? G.nome.toLowerCase() : '' };
+    ctx.ultimos = [...ctx.ultimos, ...sims.map((l) => l.id)].slice(-60);
+    const acoes = [{ rotulo: 'Ver amostra', acao: 'link', nome: Fontes.googleLivros(o.t, o.a) }, { rotulo: 'Onde comprar', acao: 'link', nome: Fontes.compra(o.t, o.a) }];
+    let texto, nota = '';
+    if (C.modo === 'parecido') { texto = `Quer algo como **${o.t}**, de ${o.a}? ${o.porque}${sims.length ? ' Estes são grátis e você pode ler e ouvir agora:' : ''}`; nota = dir; }
+    else if (C.modo === 'gratis') texto = `**${o.t}**: ${dir} ${sims.length ? o.porque : ''}`.trim();
+    else texto = `**${o.t}**, de ${o.a} (${o.ano}). ${o.sin} ${dir}${sims.length ? ' Na mesma pegada, estes são grátis:' : ''}`;
+    const sug = C.modo === 'parecido' ? ['Outra opção', `Do que fala ${o.t}?`] : [`Parecidos com ${o.t}`, 'Outra opção'];
+    return fim(cartao(texto, { livros: sims, nota, acoes, sugestoes: sug }), 'outra opção');
+  }
   async function responder(frase, A) {
     const C = classificar(frase);
     const est = A.estado();
@@ -514,6 +597,7 @@ const Cerebro = (() => {
       case 'opiniao': return respostaOpiniao(C, est, A);
       case 'debate': return respostaDebate(C, est, A);
       case 'livro': return respostaLivro(C.livro, C.n, A);
+      case 'obra': return respostaObra(C, est);
       case 'gratis': {
         if (C.livro) {
           const l = C.livro;

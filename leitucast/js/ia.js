@@ -51,7 +51,7 @@ const Lia = (() => {
     const kb = autores.length ? acharAutorKB(autores[0]) : null;
     return {
       id: 'gb:' + l.i, src: 'gb:' + l.i, t: tituloLimpo(l.t), tpt: cl && cl.l !== 'pt' ? cl.t : '',
-      a: kb ? kb.n : (autores[0] || 'Autor desconhecido'), aid: kb ? kb.id : '', l: l.l, g: l.g || [], pal: l.p || 0,
+      a: kb ? kb.n : (autores[0] || 'Anônimo'), aid: kb ? kb.id : '', l: l.l, g: l.g || [], pal: l.p || 0,
       d: l.d || 0, f: l.f, s: l.s || [], ano: cl ? cl.ano : null, sin: cl ? cl.sin : '',
       capa: l.c === 0 ? '' : Fontes.gutenberg.capa(l.i), livre: dominioPublicoBR(l), fonte: 'Project Gutenberg',
     };
