@@ -16,6 +16,8 @@
     stats: { dias: {} }, pesos: { g: {}, a: {} }, descartados: [], ppm: 230,
   });
   const salvarContas = () => LS.set(K_CONTAS, contas);
+  /* pede ao navegador para não apagar os dados do app quando faltar espaço (a sessão e os livros ficam) */
+  const pedirArmazenamentoFixo = () => { try { if (navigator.storage && navigator.storage.persist) navigator.storage.persisted().then((ja) => ja || navigator.storage.persist()).catch(() => null); } catch (e) { /* sem suporte */ } };
   function completar(s) {
     const b = novoEstado(s.nome || '');
     const r = { ...b, ...s };
@@ -190,6 +192,17 @@
     if (history.state && history.state.lcFolha === obj.id) history.back();
     else removerFolha(obj);
   }
+  /* fecha a folha e espera o "voltar" do histórico terminar (senão ele desfaz a troca de tela logo depois) */
+  function fecharFolhaEsperando(obj) {
+    return new Promise((res) => {
+      const usaHist = obj && history.state && history.state.lcFolha === obj.id;
+      if (!usaHist) { fecharFolha(obj); res(); return; }
+      const fim = () => { removeEventListener('popstate', fim); clearTimeout(t); setTimeout(res, 0); };
+      const t = setTimeout(fim, 600);
+      addEventListener('popstate', fim);
+      fecharFolha(obj);
+    });
+  }
   function confirmar(titulo, texto, sim = 'Sim', nao = 'Cancelar', perigo) {
     return new Promise((res) => {
       let resp = false;
@@ -240,64 +253,72 @@
   const ir = (h) => { if (location.hash === h) rota(); else location.hash = h; };
 
   /* ================= ENTRADA ================= */
-  async function telaEntrada() {
+  /* só dois caminhos: criar conta nova ou fazer login (nome e senha). Ninguém vê o nome dos outros. */
+  const chaveNome = (n) => String(n || '').trim().replace(/\s+/g, ' ').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  function telaEntrada() {
     tela.className = 'tela entrada';
-    const pessoas = new Map();
-    for (const p of listaNuvem) pessoas.set(p.id, p.nome);
-    for (const [id, c] of Object.entries(contas)) pessoas.set(id, c.nome);
-    const lista = Array.from(pessoas.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+    tela.onclick = null;
     tela.innerHTML = `
       <div class="entrada-hero"><div class="arte" style="background-image:${arte('almeida', true)}"></div>
         <div class="logo-grande"><img src="img/logo.svg" alt=""><h1><small>LeituCast</small>Ingrid</h1></div>
         <p class="lema">Leia e ouça livros como num livro de verdade. A Lia, sua IA de leitura, encontra os clássicos gratuitos do seu gosto.</p>
       </div>
       <div class="entrada-corpo">
-        ${lista.length ? `<h2 style="font:600 20px var(--f-tit);margin:10px 0 4px">Quem vai ler?</h2><div class="pessoas">${lista.map(([id, n]) => `<button class="pessoa" data-pessoa="${esc(id)}"><span class="avatar" style="--h:${matiz(n)}">${esc(iniciais(n))}</span><b>${esc(n)}</b>${contas[id] && contas[id].token ? '<small>neste aparelho</small>' : ''}</button>`).join('')}</div>` : ''}
-        <a class="btn ${lista.length ? '' : 'pri'} bloco" href="#cadastro">${ico('mais')} Criar minha conta</a>
+        <div class="entrada-botoes">
+          <a class="btn pri bloco" href="#cadastro">${ico('mais')} Criar conta nova</a>
+          <button class="btn sec bloco" id="btLogin">${ico('sair')} Fazer login</button>
+        </div>
         <p class="credito">Pintura: <i>Leitura</i> (1892), de Almeida Júnior. Domínio público.</p>
       </div>`;
-    tela.onclick = (e) => { const b = e.target.closest('[data-pessoa]'); if (b) entrarComo(b.dataset.pessoa); };
-    try {
-      const l = await Nuvem.lista();
-      if (Array.isArray(l)) {
-        const mudou = JSON.stringify(l) !== JSON.stringify(listaNuvem);
-        listaNuvem = l; LS.set(K_LISTA, l);
-        if (mudou && !contaId && rotaAtual.split('/')[0] !== 'cadastro') telaEntrada();
-      }
-    } catch (e) { /* offline: usa a lista salva */ }
+    $('#btLogin').onclick = abrirLogin;
   }
-  async function entrarComo(id) {
-    const c = contas[id];
-    if (c && (c.token || c.local)) return logar(id);
-    const nome = (listaNuvem.find((p) => p.id === id) || {}).nome || '';
-    const f = abrirFolha(`<h2>Oi, ${esc(primeiroNome(nome))}!</h2><p style="color:var(--tx2);margin:0 0 16px">Digite sua senha. Este aparelho vai lembrar de você.</p>
-      <form id="fSenha"><div class="campo"><label for="sSenha">Senha</label><input id="sSenha" type="password" autocomplete="current-password" autofocus></div><p class="erro-msg" id="sErro"></p><button class="btn pri bloco" type="submit">Entrar</button></form>`);
-    $('#fSenha', f.f).onsubmit = async (e) => {
+  function abrirLogin() {
+    const f = abrirFolha(`<h2>Fazer login</h2><p style="color:var(--tx2);margin:0 0 16px">Use o nome e a senha da sua conta. Este aparelho vai lembrar de você.</p>
+      <form id="fLogin">
+        <div class="campo"><label for="lNome">Nome e sobrenome</label><input id="lNome" name="username" autocomplete="username" placeholder="Ex.: Ingrid Souza" autofocus></div>
+        <div class="campo"><label for="lSenha">Senha</label><input id="lSenha" name="password" type="password" autocomplete="current-password"></div>
+        <p class="erro-msg" id="lErro"></p>
+        <button class="btn pri bloco" type="submit">Entrar</button>
+      </form>`);
+    $('#fLogin', f.f).onsubmit = async (e) => {
       e.preventDefault();
-      const senha = $('#sSenha', f.f).value;
+      const nome = $('#lNome', f.f).value, senha = $('#lSenha', f.f).value;
+      const erro = (m) => { $('#lErro', f.f).textContent = m; };
       const bt = $('button[type=submit]', f.f);
+      if (chaveNome(nome).length < 2) return erro('Digite o nome da sua conta.');
+      if (!senha) return erro('Digite a senha.');
       bt.disabled = true; bt.innerHTML = '<span class="spinner"></span>';
+      const volta = (m) => { erro(m); bt.disabled = false; bt.textContent = 'Entrar'; };
+      // conta só deste aparelho (criada sem internet)
+      const loc = Object.entries(contas).find(([, c]) => c.local && chaveNome(c.nome) === chaveNome(nome));
+      if (loc) {
+        if (loc[1].senhaLocal && loc[1].senhaLocal !== senha) return volta('Senha errada. Tente de novo.');
+        await fecharFolhaEsperando(f); return logar(loc[0]);
+      }
       try {
-        const r = await Nuvem.entrar(id, senha);
-        if (r.erro) {
-          $('#sErro', f.f).textContent = r.erro === 'senha_errada' ? 'Senha errada. Tente de novo.' : r.erro === 'bloqueado' ? 'Muitas tentativas. Espere 10 minutos.' : 'Não encontrei essa conta.';
-          bt.disabled = false; bt.textContent = 'Entrar'; return;
-        }
+        let lista = null;
+        try { lista = await Nuvem.lista(); if (Array.isArray(lista)) { listaNuvem = lista; LS.set(K_LISTA, lista); } } catch (er) { lista = listaNuvem; }
+        const achou = (lista || []).find((x) => chaveNome(x.nome) === chaveNome(nome));
+        if (!achou) return volta('Não encontrei uma conta com esse nome. Confira como você escreveu ou crie uma conta nova.');
+        const r = await Nuvem.entrar(achou.id, senha);
+        if (r.erro) return volta(r.erro === 'senha_errada' ? 'Senha errada. Tente de novo.' : r.erro === 'bloqueado' ? 'Muitas tentativas. Espere 10 minutos.' : 'Não encontrei essa conta.');
+        const id = achou.id;
         contas[id] = { nome: r.nome, token: r.token, versao: r.versao };
         salvarContas();
         const local = LS.get(kDados(id), null);
         S = completar(local ? juntar(local, r.estado || {}) : { ...(r.estado || {}), nome: r.nome });
         LS.set(kDados(id), S);
-        fecharFolha(f);
+        await fecharFolhaEsperando(f);
         logar(id);
       } catch (er) {
-        $('#sErro', f.f).textContent = 'Sem conexão com a nuvem. Verifique a internet.';
-        bt.disabled = false; bt.textContent = 'Entrar';
+        volta('Sem conexão com a nuvem. Verifique a internet.');
       }
     };
   }
   async function logar(id) {
     contaId = id;
+    if (contas[id]) { contas[id].ultimo = Date.now(); delete contas[id].saiu; salvarContas(); }
+    pedirArmazenamentoFixo();
     setTimeout(conferirArquivos, 5000); // depois da sincronização com a nuvem
     LS.set(K_ATUAL, id);
     S = completar(LS.get(kDados(id), null) || S || novoEstado(contas[id].nome));
@@ -320,7 +341,7 @@
     const c = contas[contaId];
     sincronizar();
     if (c && c.token && !c.local) Nuvem.sair(c.token).catch(() => null);
-    if (c) { c.token = c.local ? c.token : null; salvarContas(); }
+    if (c) { c.token = c.local ? c.token : null; c.saiu = true; salvarContas(); }
     LS.del(K_ATUAL);
     contaId = null; S = null;
     location.hash = '#entrar';
@@ -369,7 +390,7 @@
           const r = await Nuvem.criar(nome, senha, est);
           if (r.erro) {
             bt.disabled = false; bt.textContent = 'Continuar';
-            return erro(r.erro === 'nome_existe' ? 'Já existe uma conta com esse nome. Use outro ou entre pela tela inicial.' : r.erro === 'senha_curta' ? 'Senha muito curta.' : 'Nome inválido.');
+            return erro(r.erro === 'nome_existe' ? 'Já existe uma conta com esse nome. Use outro nome, ou volte e toque em Fazer login.' : r.erro === 'senha_curta' ? 'Senha muito curta.' : 'Nome inválido.');
           }
           contas[r.id] = { nome: r.nome, token: r.token, versao: r.versao };
           salvarContas();
@@ -1198,9 +1219,9 @@
       <div class="cartao">
         <div class="linha-op"><span>Instalar o LeituCast<small>No celular e no computador, como um app de verdade</small></span><button class="btn sec peq" id="btInstalar">${ico('instalar')} Instalar</button></div>
         ${c.local ? `<div class="linha-op"><span>Salvar na nuvem<small>Para entrar em outros aparelhos</small></span><button class="btn pri peq" id="btNuvem">${ico('nuvem')} Salvar</button></div>` : `<div class="linha-op"><span>Trocar senha</span><button class="btn peq" id="btSenha">Trocar</button></div>`}
-        <div class="linha-op"><span>Sair desta conta</span><button class="btn peq" id="btSair">${ico('sair')} Sair</button></div>
         <div class="linha-op"><span>Excluir conta<small>Apaga tudo da nuvem</small></span><button class="btn fant peq" id="btExcluir" style="color:var(--erro)">Excluir</button></div>
       </div>
+      <button class="btn bloco sair-conta" id="btSair">${ico('sair')} Sair da conta</button>
       <p class="credito">Pinturas em domínio público: Almeida Júnior, Fragonard, Van Gogh, Vermeer, Perugini, Fantin-Latour e Eliseu Visconti (Wikimedia Commons). Livros: Project Gutenberg e Wikisource. Capas: Open Library. Vozes abertas: Piper (Rhasspy) e OpenVoiceOS. Fontes: Fraunces, Manrope, Literata, Lora e Atkinson Hyperlegible (OFL).</p>
     </div>`;
     tela.onclick = (e) => { const b = e.target.closest('[data-ed]'); if (b) editarGosto(b.dataset.ed); };
@@ -1362,6 +1383,9 @@
   /* ================= LEITOR ================= */
   let leitorAberto = null;
   const secLeitor = $('#leitor');
+  // marca no <body> quando o leitor está na tela: a tela de trás para de desenhar (só muda ao abrir/fechar,
+  // diferente de um seletor :has, que o navegador reavaliava a cada virada de página)
+  new MutationObserver(() => document.body.classList.toggle('lendo', !secLeitor.hidden)).observe(secLeitor, { attributes: true, attributeFilter: ['hidden'] });
   /* tela cheia "baixando o livro" com barra: o livro só abre depois de baixado e conferido */
   function telaBaixandoLivro(t) {
     secLeitor.hidden = false;
@@ -1820,7 +1844,11 @@
 
   /* ================= início ================= */
   montarNav();
-  const atual = LS.get(K_ATUAL, null);
+  let atual = LS.get(K_ATUAL, null);
+  if (!(atual && contas[atual] && (contas[atual].token || contas[atual].local))) {
+    const ult = Object.entries(contas).filter(([, c]) => (c.token || c.local) && !c.saiu).sort((a, b) => (b[1].ultimo || 0) - (a[1].ultimo || 0))[0];
+    if (ult) { atual = ult[0]; LS.set(K_ATUAL, atual); }
+  }
   if (atual && contas[atual] && (contas[atual].token || contas[atual].local)) {
     contaId = atual;
     S = completar(LS.get(kDados(atual), null) || novoEstado(contas[atual].nome));

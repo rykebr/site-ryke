@@ -246,6 +246,42 @@ const Leitor = (() => {
     } else await pintar(pg.D, { c: pos.c, col: pos.col });
     pg.D.classList.remove('escondida'); pg.E.classList.remove('escondida');
     atualizarRodape();
+    // qualquer outra mudança (fonte, salto, marca) passa por aqui: o preparo antigo não vale mais
+    pg.S.ref = null; pg.F.ref = null;
+    agendarPreparo();
+  }
+  /* ---------- próxima página já pronta (celular, uma página na tela) ----------
+     Enquanto a pessoa lê, a página seguinte fica desenhada embaixo da atual (S) e a atual já está na frente da
+     folha (F). Ao virar, a folha só revela o que está pronto; no fim D e S trocam de papel, sem redesenhar nada
+     durante a animação. */
+  const mesma = (a, b) => !!(a && b && a.c === b.c && a.col === b.col);
+  const podePre = () => !!(L && geo && !geo.duas && cfg.virar === 'folha' && !matchMedia('(prefers-reduced-motion: reduce)').matches);
+  let tPre = 0;
+  function agendarPreparo() {
+    clearTimeout(tPre);
+    if (!podePre()) return;
+    tPre = setTimeout(() => {
+      const vai = () => prepararProxima().catch(() => null);
+      if (window.requestIdleCallback) requestIdleCallback(vai, { timeout: 700 }); else vai();
+    }, 140);
+  }
+  async function prepararProxima() {
+    if (!podePre() || animando) return;
+    const alvo = await alvoFrente();
+    if (!podePre() || animando || !alvo) return;
+    if (!mesma(pg.S.ref, alvo) || pg.S.dataset.slot !== 'D') { await pintar(pg.S, alvo); pg.S.dataset.slot = 'D'; }
+    if (animando) return;
+    pg.S.setAttribute('aria-hidden', 'true');
+    pg.S.classList.remove('lt-oculto'); // fica por baixo da página atual (z-index menor), já desenhada
+    if (!mesma(pg.F.ref, pos)) await pintar(pg.F, pos);
+  }
+  /* fim de uma virada para a frente: a página de baixo (já com o destino) passa a ser a de cima */
+  function trocarDS() {
+    const d = pg.D, s = pg.S;
+    s.classList.replace('pg-s', 'pg-d'); d.classList.replace('pg-d', 'pg-s');
+    s.classList.remove('escondida', 'lt-oculto'); s.removeAttribute('aria-hidden'); delete s.dataset.slot;
+    d.classList.remove('escondida'); d.classList.add('lt-oculto'); d.dataset.slot = 'D'; d.setAttribute('aria-hidden', 'true');
+    pg.D = s; pg.S = d;
   }
   async function alvoFrente() {
     const n = ppv();
@@ -293,9 +329,11 @@ const Leitor = (() => {
         pg.E.classList.add('escondida');
       }
     } else {
-      if (dir > 0) { await pintar(pg.S, alvo); await pintar(pg.F, pos); }
-      else { await pintar(pg.S, pos); await pintar(pg.F, alvo); }
-      await pintar(pg.V, null);
+      if (dir > 0) {
+        if (!mesma(pg.S.ref, alvo)) await pintar(pg.S, alvo);
+        if (!mesma(pg.F.ref, pos)) await pintar(pg.F, pos);
+      } else { await pintar(pg.S, pos); await pintar(pg.F, alvo); }
+      if (pg.V.ref || pg.V.cap !== -1 || !pg.V.classList.contains('vazia')) await pintar(pg.V, null);
       pg.V.classList.add('verso-papel');
       pg.S.dataset.slot = 'D';
       pg.D.classList.add('escondida');
@@ -359,8 +397,8 @@ const Leitor = (() => {
         await prepararFolha(dir, alvo);
         await animar(dir > 0 ? 0 : -180, dir > 0 ? -180 : 0, geo.celular ? 560 : 680, dir, suave);
         pos = { c: alvo.c, col: alvo.col };
-        await pintarAtual();
-        encerrarFolha();
+        if (dir > 0 && !geo.duas && mesma(pg.S.ref, pos)) { trocarDS(); encerrarFolha(); atualizarRodape(); agendarPreparo(); }
+        else { await pintarAtual(); encerrarFolha(); }
       } else if (modo === 'deslizar' && !rapido) {
         pos = { c: alvo.c, col: alvo.col };
         await pintarAtual();
@@ -483,10 +521,14 @@ const Leitor = (() => {
       await animar(angAgora, angFim, ms, gg.dir);
       if (completa) {
         pos = { c: gg.alvo.c, col: gg.alvo.col };
-        await pintarAtual();
+        if (gg.dir > 0 && !geo.duas && mesma(pg.S.ref, pos)) { trocarDS(); encerrarFolha(); atualizarRodape(); agendarPreparo(); }
+        else { await pintarAtual(); encerrarFolha(); }
         salvarPosicao();
-      } else await pintarAtual();
-      encerrarFolha();
+      } else {
+        // desistiu: a página atual nem mudou, só volta a aparecer (a de baixo continua pronta)
+        pg.D.classList.remove('escondida'); pg.E.classList.remove('escondida');
+        encerrarFolha(); agendarPreparo();
+      }
       animando = false;
     };
     palco.addEventListener('pointerup', solta);

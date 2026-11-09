@@ -441,7 +441,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 .lt-livro.duas .pg-d { left: var(--pg-w); }
 .pg-s[data-slot="E"] { left: 0; border-radius: 8px 3px 3px 8px; }
 .lt-livro.duas .pg-s[data-slot="D"] { left: var(--pg-w); }
-.pg.escondida { visibility: hidden; }
+.pg.escondida { opacity: 0; pointer-events: none; }
 .pg.pg-m { position: relative; }
 .pg-cab { position: absolute; top: calc(var(--pg-mt) * .38); left: var(--pg-mx); right: var(--pg-mx); text-align: center; font: 500 11px/1 var(--f-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--tinta2); opacity: .75; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pg-num { position: absolute; bottom: calc(var(--pg-mt) * .34); left: 0; right: 0; text-align: center; font: 500 12px var(--f-tit); color: var(--tinta2); }
@@ -482,7 +482,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 @keyframes fita { from { transform: translateY(-100%); } }
 .pg.vazia .pg-janela { background: none; }
 .pg-verso.verso-papel .pg-janela, .pg-verso.verso-papel .pg-num, .pg-verso.verso-papel .pg-cab { display: none; }
-.lt-folha { position: absolute; top: 0; left: 0; width: var(--pg-w); height: var(--pg-h); transform-origin: left center; transform-style: preserve-3d; z-index: 5; will-change: transform; pointer-events: none; }
+.lt-folha { position: absolute; top: 0; left: 0; width: var(--pg-w); height: var(--pg-h); transform-origin: left center; transform-style: preserve-3d; z-index: 5; will-change: transform, opacity; pointer-events: none; }
 .lt-folha.duas { left: var(--pg-w); }
 .lt-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .lt-face .pg { position: absolute; inset: 0; left: 0 !important; }
@@ -647,7 +647,8 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .baixa-livro .barra-prog { width: min(280px, 80vw); height: 6px; border-radius: 99px; background: rgba(255,255,255,.14); overflow: hidden; }
 .baixa-livro .barra-prog i { display: block; height: 100%; background: #E8B04B; border-radius: 99px; transition: width .25s ease; }
 .baixa-livro small { opacity: .7; font-size: 12.5px; }
-.lt-oculto { visibility: hidden !important; }
+/* transparência e não visibility: visibility é herdada e obrigava o navegador a revisitar todo o texto do capítulo */
+.lt-oculto { opacity: 0 !important; pointer-events: none !important; }
 /* o Cantinho é sempre claro: usa as cores do tema claro mesmo com o app no escuro (caixa de busca, cards, textos) */
 .tela.infantil { --bg: #FFF7E6; --bg2: #FDEFF5; --card: #FFFFFF; --card2: #FFF3E3; --linha: rgba(90, 50, 20, .1); --linha2: rgba(90, 50, 20, .2);
   --tx: #3A2A1E; --tx2: #6B5446; --tx3: #9A8676; color-scheme: light; }
@@ -658,4 +659,12 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 /* desempenho da leitura: o leitor numa camada própria e a tela de trás sem desenhar enquanto o livro está aberto
    (antes cada virada redesenhava junto a tela inicial inteira, escondida atrás do leitor) */
 .leitor { will-change: transform; }
-body:has(> #leitor:not([hidden])) > #app { visibility: hidden; }
+body.lendo > #app { visibility: hidden; }
+/* a página de cima (D/E) sempre por cima da que espera pronta por baixo (S) */
+.lt-livro > .pg-d, .lt-livro > .pg-e { z-index: 2; }
+.lt-livro > .pg-s { z-index: 1; }
+/* entrada: só criar conta ou fazer login */
+.entrada-botoes { display: grid; gap: 12px; margin: 14px 0 6px; }
+.entrada-botoes .btn { min-height: 54px; font-size: 16.5px; }
+/* perfil: sair da conta, bem visível no fim */
+.sair-conta { margin: 26px 0 8px; min-height: 52px; color: var(--erro); border: 1px solid color-mix(in srgb, var(--erro) 45%, transparent); background: transparent; font-weight: 600; }
