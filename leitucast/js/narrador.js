@@ -56,7 +56,7 @@ const Narrador = (() => {
   let livroAtual = null;
   const baixadas = new Set();
   const baixando = new Map();
-  let avisouLenta = false;
+  let avisouLenta = false, falhasSeguidas = 0;
   let semNeural = false; // a voz neural falhou nesta sessão (sem internet no primeiro uso): usa a do aparelho
   let vigia = 0, estimador = 0, temLimites = {};
   let dormirAte = 0, dormirFimCap = false, dormirT = 0;
@@ -116,20 +116,32 @@ const Narrador = (() => {
   }
 
   /* ---------------- worker Piper ---------------- */
+  let modoSeguro = false;
+  function reiniciarWorker(seguro) {
+    if (seguro) modoSeguro = true;
+    try { worker && worker.terminate(); } catch (e) { /* já parou */ }
+    worker = null;
+    pedidos.forEach((p) => p.rej(new Error('voz reiniciada'))); pedidos.clear();
+  }
   function chamar(tipo, dados, aoProg) {
     if (!worker) {
-      worker = new Worker(new URL('js/voz-piper.js?v=18', location.href).href);
+      worker = new Worker(new URL('js/voz-piper.js?v=19' + (modoSeguro ? '&seguro=1' : ''), location.href).href);
       worker.onmessage = (e) => {
         const p = pedidos.get(e.data.id);
         if (!p) return;
         if (e.data.progresso) { p.prog && p.prog(e.data.progresso); return; }
         pedidos.delete(e.data.id);
-        if (e.data.ok) p.res(e.data); else p.rej(new Error(e.data.erro));
+        if (e.data.ok) p.res(e.data); else p.rej(Object.assign(new Error(e.data.erro), { respondeu: true })); // erro respondido: o processo da voz está vivo
       };
-      worker.onerror = (e) => { pedidos.forEach((p) => p.rej(new Error(e.message || 'worker'))); pedidos.clear(); worker = null; };
+      worker.onerror = (e) => { pedidos.forEach((p) => p.rej(new Error(e.message || 'worker'))); pedidos.clear(); try { worker.terminate(); } catch (er) { /* nada */ } worker = null; modoSeguro = true; };
     }
     const id = ++nPed;
-    return new Promise((res, rej) => { pedidos.set(id, { res, rej, prog: aoProg }); worker.postMessage({ id, tipo, ...dados }); });
+    return new Promise((res, rej) => {
+      // gerar uma frase não pode demorar meio minuto: o processo da voz travou ou morreu sem avisar (memória)
+      const tm = tipo === 'falar' ? setTimeout(() => { if (pedidos.has(id)) { pedidos.delete(id); rej(new Error('tempo')); reiniciarWorker(true); } }, 30000) : 0;
+      pedidos.set(id, { res: (d) => { clearTimeout(tm); res(d); }, rej: (e) => { clearTimeout(tm); rej(e); }, prog: aoProg });
+      worker.postMessage({ id, tipo, ...dados });
+    });
   }
   const vozBaixada = async (v) => { try { return (await chamar('existe', { voz: v })).existe; } catch (e) { return false; } };
   function baixarVoz(v, aoProg) {
@@ -137,6 +149,32 @@ const Narrador = (() => {
     return chamar('baixar', { voz: v }, aoProg);
   }
   const removerVoz = (v) => chamar('remover', { voz: v });
+  /* um download por voz, compartilhado por quem precisar dela (segundo plano, narração, historinha).
+     Os avisos de progresso vão para a tela; o app só mostra se a pessoa estiver esperando a voz */
+  function baixarCompartilhado(v, fundo) {
+    if (baixadas.has(v.id)) return Promise.resolve();
+    if (!baixando.has(v.id)) {
+      emitir('baixandoVoz', { nome: v.nome, pct: 0, fundo });
+      const pr = baixarVoz(v, (p) => { if (p.parte === 'voz' && p.t) emitir('baixandoVoz', { nome: v.nome, pct: p.n / p.t, fundo: baixando.get(v.id) && baixando.get(v.id).fundo }); })
+        .then(() => { baixadas.add(v.id); emitir('baixandoVoz', { nome: v.nome, pct: 1, fim: true, fundo: pr.fundo }); })
+        .catch((e) => { emitir('baixandoVoz', { nome: v.nome, falhou: true, motivo: e.message, fundo: pr.fundo }); throw e; })
+        .finally(() => baixando.delete(v.id));
+      pr.fundo = !!fundo;
+      pr.catch(() => null);
+      baixando.set(v.id, pr);
+    } else if (!fundo) baixando.get(v.id).fundo = false; // alguém começou a esperar: passa a mostrar o progresso
+    return baixando.get(v.id);
+  }
+  /* depois do login: baixa a voz padrão em segundo plano, para a narração já começar na hora no primeiro toque.
+     Não baixa com a economia de dados do celular ligada. */
+  async function prepararVoz(id) {
+    const v = await acharVoz(id);
+    if (!v || v.motor !== 'piper') return false;
+    if (baixadas.has(v.id)) return true;
+    if (await vozBaixada(v)) { baixadas.add(v.id); return true; }
+    try { if (navigator.connection && navigator.connection.saveData) return false; } catch (e) { /* sem a API */ }
+    try { await baixarCompartilhado(v, true); return true; } catch (e) { return false; }
+  }
 
   /* ---------------- frases ---------------- */
   const ABREV = new Set(['sr', 'sra', 'srs', 'sras', 'drs', 'srta', 'dr', 'dra', 'd', 'prof', 'profa', 'exmo', 'exma', 'v', 's', 'sto', 'sta', 'etc', 'cap', 'pag', 'p', 'n', 'no', 'nº', 'vol', 'ed', 'st', 'mr', 'mrs', 'ms', 'jr', 'vs', 'art', 'fig', 'ilmo', 'gen', 'cel', 'ten', 'pe', 'fr', 'mme', 'mlle', 'm', 'dna', 'sr.', 'av', 'tel']);
@@ -304,6 +342,7 @@ const Narrador = (() => {
     if (prefetch.has(k)) return prefetch.get(k);
     const fr = frases[idx];
     const p = chamar('falar', { voz: v, texto: falavel(txt.slice(fr.ini, fr.fim)).txt, opt: { ritmo: 1 / clamp(cfg.vel * est.vel, 0.5, 2.2), ruido: est.ruido } }).then((r) => ({ ...r, idx }));
+    p.catch(() => { if (prefetch.get(k) === p) prefetch.delete(k); }); // falha não fica guardada para a vez dela
     prefetch.set(k, p);
     if (prefetch.size > 6) prefetch.delete(prefetch.keys().next().value);
     return p;
@@ -318,31 +357,36 @@ const Narrador = (() => {
       if (!baixadas.has(v.id)) {
         if (await vozBaixada(v)) baixadas.add(v.id);
         else {
-          if (!baixando.has(v.id)) {
-            emitir('baixandoVoz', { nome: v.nome, pct: 0 });
-            const pr = baixarVoz(v, (p) => { if (p.parte === 'voz' && p.t) emitir('baixandoVoz', { nome: v.nome, pct: p.n / p.t }); })
-              .then(() => { baixadas.add(v.id); emitir('baixandoVoz', { nome: v.nome, pct: 1, fim: true }); })
-              .catch((e) => { emitir('baixandoVoz', { nome: v.nome, falhou: true, motivo: e.message }); throw e; })
-              .finally(() => baixando.delete(v.id));
-            pr.catch(() => null);
-            baixando.set(v.id, pr);
-          }
-          // espera a voz escolhida terminar de baixar (nunca começa com outra voz); parar continua funcionando
-          await baixando.get(v.id);
+          // espera a voz escolhida terminar de baixar (nunca começa com outra voz); parar continua funcionando.
+          // Se ela já estava baixando em segundo plano, só passa a mostrar o progresso.
+          await baixarCompartilhado(v, false);
           if (ger !== geracao) return;
         }
       }
       if (ger !== geracao) return;
       const t0 = performance.now();
-      r = await sintetizar(v, fi, est);
+      // até 3 tentativas: na segunda o processo da voz é reiniciado em modo seguro (menos memória)
+      for (let tent = 0; ; tent++) {
+        try { r = await sintetizar(v, fi, est); break; } catch (e) {
+          if (ger !== geracao) return;
+          if (tent >= 2) throw e;
+          // só reinicia se o processo da voz morreu ou travou; erro respondido é só tentar a frase de novo
+          if (!e.respondeu && worker) reiniciarWorker(true);
+          await new Promise((ok) => setTimeout(ok, 250));
+        }
+      }
+      falhasSeguidas = 0;
       // voz mais lenta que a fala neste aparelho (Dora/Kokoro em CPU simples): avisa uma vez
       const gastou = (performance.now() - t0) / 1000, dura = r.pcm.length / r.sr;
       if (v.tipo === 'kokoro' && dura > 1.5 && gastou > dura * 1.15 && !avisouLenta) { avisouLenta = true; emitir('erro', `A voz ${v.nome} está mais lenta que a leitura neste aparelho e pode pausar entre as frases. A Faber é bem mais rápida.`); }
     } catch (e) {
       if (ger !== geracao) return;
-      // não troca de voz sozinho: para e avisa (a pessoa tenta de novo ou escolhe outra voz)
+      // não troca de voz sozinho. Uma frase problemática é pulada e a leitura segue; só para se várias
+      // seguidas falharem (aí avisa)
       const baixou = baixadas.has(v.id);
-      if (baixou) emitir('erro', `A voz ${v.nome} falhou nesta frase. Toque em Ouvir para tentar de novo.`);
+      if (baixou && ++falhasSeguidas < 3 && frases[fi + 1]) { setTimeout(() => { if (ger === geracao && tocando) proxima(ger); }, 30); return; }
+      falhasSeguidas = 0;
+      if (baixou) emitir('erro', `A voz ${v.nome} não conseguiu continuar. Toque em Ouvir para tentar de novo.`);
       return parar();
     }
     if (ger !== geracao) return;
@@ -555,16 +599,7 @@ const Narrador = (() => {
     let v = await acharVoz(cfg.voz || await vozPadrao('pt-BR'));
     if (v && v.motor === 'piper' && !(baixadas.has(v.id) || await vozBaixada(v))) {
       // a voz escolhida ainda não está no aparelho: baixa e espera (não troca de voz sozinho)
-      if (!baixando.has(v.id)) {
-        emitir('baixandoVoz', { nome: v.nome, pct: 0 });
-        const pr = baixarVoz(v, (q) => { if (q.parte === 'voz' && q.t) emitir('baixandoVoz', { nome: v.nome, pct: q.n / q.t }); })
-          .then(() => { baixadas.add(v.id); emitir('baixandoVoz', { nome: v.nome, pct: 1, fim: true }); })
-          .catch((e) => { emitir('baixandoVoz', { nome: v.nome, falhou: true, motivo: e.message }); throw e; })
-          .finally(() => baixando.delete(v.id));
-        pr.catch(() => null);
-        baixando.set(v.id, pr);
-      }
-      try { await baixando.get(v.id); } catch (e) { return false; }
+      try { await baixarCompartilhado(v, false); } catch (e) { return false; }
       if (meu !== amostraGer) return false;
     }
     if (!v) { const { sistema } = await listarVozes('pt-BR'); v = sistema[0] || null; }
@@ -603,7 +638,7 @@ const Narrador = (() => {
   }
 
   return {
-    VOZES_ABERTAS, ESTILOS, listarVozes, vozPadrao, acharVoz, vozBaixada, baixarVoz, removerVoz, falarTexto,
+    VOZES_ABERTAS, ESTILOS, listarVozes, vozPadrao, acharVoz, vozBaixada, baixarVoz, removerVoz, falarTexto, prepararVoz,
     tocar, pausar, continuar, parar, pular, ajustar, dormir, amostra, pararAmostra, on, segmentar, _falavel: falavel,
     definirMidia: (m) => { midia = m; },
     get estado() { return estado(); }, get cfg() { return { ...cfg }; },

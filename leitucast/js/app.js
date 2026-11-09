@@ -324,7 +324,7 @@
     S.nome = contas[id].nome;
     aplicarTema();
     Narrador.configurar({ ...S.cfg.voz }, { texto: (c) => Leitor.textoCapitulo(c), ncaps: () => (Leitor.livro ? Leitor.livro.caps.length : 0) });
-    if (!S.cfg.voz.voz) Narrador.vozPadrao('pt-BR').then((v) => { if (v && !S.cfg.voz.voz) { S.cfg.voz.voz = v; Narrador.ajustar({ voz: v }); salvar(); } });
+    garantirVozPadrao();
     ir(S.perfil.pronto ? '#inicio' : '#cadastro/1');
     const c = contas[id];
     if (c.token && !c.local) {
@@ -335,6 +335,24 @@
         } else if (r && r.erro === 'sessao') { c.token = null; salvarContas(); }
       } catch (e) { /* offline */ }
     }
+  }
+  /* a voz neural (Faber) vira a padrão de quem ainda não escolheu uma voz, e já baixa em segundo plano:
+     no primeiro toque no fone a narração começa na hora */
+  let vozFundoAvisar = false;
+  async function garantirVozPadrao() {
+    const conta = contaId;
+    try {
+      const p = await Narrador.vozPadrao('pt-BR');
+      if (!S || contaId !== conta) return;
+      if (p && (!S.cfg.voz.voz || !S.cfg.voz.escolhida) && S.cfg.voz.voz !== p) { S.cfg.voz.voz = p; Narrador.ajustar({ voz: p }); salvar(); }
+      const id = S.cfg.voz.voz;
+      if (!id || !id.startsWith('piper:')) return;
+      await sleep(3500); // deixa a primeira tela carregar antes
+      if (!S || contaId !== conta) return;
+      const v = await Narrador.acharVoz(id);
+      vozFundoAvisar = !!(v && !(await Narrador.vozBaixada(v)));
+      Narrador.prepararVoz(id);
+    } catch (e) { /* sem voz agora: baixa quando tocar no fone */ }
   }
   function sair() {
     const c = contas[contaId];
@@ -408,7 +426,7 @@
         rascunho = null;
         aplicarTema();
         Narrador.configurar({ ...S.cfg.voz }, { texto: (c) => Leitor.textoCapitulo(c), ncaps: () => (Leitor.livro ? Leitor.livro.caps.length : 0) });
-        Narrador.vozPadrao('pt-BR').then((v) => { if (v && !S.cfg.voz.voz) { S.cfg.voz.voz = v; Narrador.ajustar({ voz: v }); } });
+        garantirVozPadrao();
         location.hash = '#cadastro/1';
       };
       return;
@@ -1296,7 +1314,7 @@
         ou.removeAttribute('data-tocando');
         ou.innerHTML = ico('play') + ' Ouvir';
       } else if (us) {
-        S.cfg.voz.voz = us.dataset.usarVoz; Narrador.ajustar({ voz: S.cfg.voz.voz }); salvar();
+        S.cfg.voz.voz = us.dataset.usarVoz; S.cfg.voz.escolhida = true; Narrador.ajustar({ voz: S.cfg.voz.voz }); salvar();
         toast('Voz escolhida.'); pintarVozes(el, lang, aoEscolher); aoEscolher && aoEscolher();
       } else if (ba) {
         const v = Narrador.VOZES_ABERTAS.find((x) => x.id === ba.dataset.baixarVoz);
@@ -1308,7 +1326,7 @@
         linha.querySelector('div').appendChild(info);
         try {
           await Narrador.baixarVoz(v, (p) => { info.textContent = `Baixando ${p.parte === 'voz' ? 'a voz' : p.parte === 'motor' ? 'o motor' : 'os fonemas'}… ${p.t ? Math.round((p.n / p.t) * 100) + '%' : (p.n / 1048576).toFixed(0) + ' MB'}`; });
-          S.cfg.voz.voz = v.id; Narrador.ajustar({ voz: v.id }); salvar();
+          S.cfg.voz.voz = v.id; S.cfg.voz.escolhida = true; Narrador.ajustar({ voz: v.id }); salvar();
           toast(`Voz ${v.nome} pronta. Funciona sem internet.`);
           pintarVozes(el, lang, aoEscolher);
         } catch (er) { info.textContent = `Não consegui baixar (${er.message}). Toque em Baixar de novo: continua de onde parou.`; ba.disabled = false; }
@@ -1689,7 +1707,7 @@
   Narrador.on('parou', () => { if (leitorAberto) Leitor.limparDestaque(); atualizarBarraNarracao(); });
   Narrador.on('estado', () => atualizarBarraNarracao());
   Narrador.on('erro', (m) => toast(m, 4500));
-  Narrador.on('baixandoVoz', (d) => toast(
+  Narrador.on('baixandoVoz', (d) => d.fundo ? (d.fim && vozFundoAvisar ? (vozFundoAvisar = false, toast(`Voz ${d.nome} pronta: a narração já funciona, inclusive sem internet.`, 3500)) : null) : toast(
     d.falhou ? `Não consegui baixar a voz ${d.nome} (${d.motivo}). Toque em Ouvir de novo para tentar outra vez; o download continua de onde parou.`
       : d.fim ? `Voz ${d.nome} pronta. A narração começa agora, e a voz fica guardada para usar offline.`
         : `Baixando a voz ${d.nome} (só na primeira vez): ${Math.round(d.pct * 100)}%. A narração começa quando terminar.`,

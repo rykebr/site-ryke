@@ -59,7 +59,9 @@ async function prepararBase(prog) {
     importScripts(ORT_BASE + 'ort.wasm.min.js');
     ORT = self.ort;
     // com isolamento de origem dá para usar vários núcleos (a Dora/Kokoro precisa disso para tocar sem pausas)
-    ORT.env.wasm.numThreads = self.crossOriginIsolated ? Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1)) : 1;
+    // modo seguro (depois de uma falha): um núcleo só, que usa bem menos memória no celular
+    const seguro = /[?&]seguro=1/.test(self.location.search);
+    ORT.env.wasm.numThreads = !seguro && self.crossOriginIsolated ? Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 2) - 1)) : 1;
     ORT.env.wasm.wasmPaths = ORT_BASE;
     ORT.env.wasm.wasmBinary = await obter(ORT_BASE + 'ort-wasm-simd-threaded.wasm', (n, t) => prog('motor', n, t));
   }
@@ -98,8 +100,16 @@ function idsDeFonemas(lista, mapa) {
   return ids;
 }
 
-async function carregarVoz(voz, prog) {
-  if (sessoes.has(voz.id)) return sessoes.get(voz.id);
+/* carrega a voz uma vez só, mesmo com vários pedidos ao mesmo tempo (duas cargas juntas estouravam a memória) */
+function carregarVoz(voz, prog) {
+  if (!sessoes.has(voz.id)) {
+    const pr = carregarVozAgora(voz, prog);
+    sessoes.set(voz.id, pr);
+    pr.catch(() => sessoes.delete(voz.id));
+  }
+  return sessoes.get(voz.id);
+}
+async function carregarVozAgora(voz, prog) {
   await prepararBase(prog);
   if (voz.tipo === 'kokoro') {
     // Kokoro-82M: vocabulário de fonemas IPA do tokenizer e o vetor de estilo da voz (510 × 256)
@@ -107,16 +117,12 @@ async function carregarVoz(voz, prog) {
     const estilo = new Float32Array(await obter(voz.estilo, () => {}));
     const modelo = await obter(voz.onnx, (n, t) => prog('voz', n, t || (voz.mb || 90) * 1048576));
     const sess = await ORT.InferenceSession.create(modelo, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
-    const s = { kokoro: true, vocab: tok.model.vocab, estilo, sess, cfg: { audio: { sample_rate: 24000 } } };
-    sessoes.set(voz.id, s);
-    return s;
+    return { kokoro: true, vocab: tok.model.vocab, estilo, sess, cfg: { audio: { sample_rate: 24000 } } };
   }
   const cfg = JSON.parse(new TextDecoder().decode(await obter(voz.cfg, () => {})));
   const modelo = await obter(voz.onnx, (n, t) => prog('voz', n, t || voz.bytes || 0));
   const sess = await ORT.InferenceSession.create(modelo, { executionProviders: ['wasm'], graphOptimizationLevel: 'all' });
-  const s = { cfg, sess };
-  sessoes.set(voz.id, s);
-  return s;
+  return { cfg, sess };
 }
 
 function aparar(pcm, sr) {
@@ -183,8 +189,15 @@ async function falar(voz, texto, opt) {
   return { pcm, sr: cfg.audio.sample_rate };
 }
 
-self.onmessage = async (e) => {
+/* fila: uma tarefa por vez. O ONNX Runtime não aceita duas gerações ao mesmo tempo na mesma voz, e o
+   fonemizador cria um programa por frase; em paralelo isso falhava ou estourava a memória do celular */
+let fila = Promise.resolve();
+self.onmessage = (e) => {
   const m = e.data;
+  if (m.tipo === 'existe') { tratar(m); return; } // só consulta o cache: não precisa esperar
+  fila = fila.then(() => tratar(m), () => tratar(m));
+};
+async function tratar(m) {
   try {
     if (m.tipo === 'existe') {
       const ok = await existe(m.voz.onnx);
@@ -204,4 +217,4 @@ self.onmessage = async (e) => {
   } catch (err) {
     self.postMessage({ id: m.id, ok: false, erro: String(err && err.message || err) });
   }
-};
+}
