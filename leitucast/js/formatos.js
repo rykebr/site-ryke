@@ -42,6 +42,7 @@ const Formatos = (() => {
       if (mine.length) attrs += ` class="${mine.join(' ')}"`;
       if (tag === 'img' || tag === 'image') {
         const src = n.getAttribute('src') || n.getAttributeNS('http://www.w3.org/1999/xlink', 'href') || n.getAttribute('href') || n.getAttribute('xlink:href');
+        if (src && /^data:image\//.test(src)) { out.push(`<img src="${esc(src)}" alt="${esc(n.getAttribute('alt') || '')}"${attrs}>`); return; } // ilustração já embutida no livro
         if (src && !/^https?:/.test(src)) {
           const p = caminho(docPath, src);
           imgs.add(p);
@@ -82,8 +83,10 @@ const Formatos = (() => {
   };
 
   /* divide documentos grandes nos capítulos (títulos e linhas de separação) e nunca deixa passar do limite */
+  // tamanho do texto, sem contar ilustrações embutidas (data:), que não pesam na diagramação
+  const tamTexto = (s) => (s.indexOf('data:') < 0 ? s.length : s.replace(/src="data:[^"]*"/g, 'src=""').length);
   function dividir(cap) {
-    if (cap.html.length <= 60000) return [cap];
+    if (tamTexto(cap.html) <= 60000) return [cap];
     const tmp = document.createElement('div');
     tmp.innerHTML = cap.html;
     let alvo = tmp;
@@ -97,8 +100,9 @@ const Formatos = (() => {
       const tit = ehTit(el);
       const secao = el.nodeType === 1 && !tit && el.firstElementChild && /^H[1-6]$/.test(el.firstElementChild.tagName) && el.textContent.length > 400;
       const quebra = (el.nodeType === 1 && el.tagName === 'HR') || (tit && !antTit) || secao;
-      if ((quebra && tam > 2500) || (tam + h.length > MAX_CAP && tam > 0)) { partes.push(atual.join('')); atual = []; tam = 0; }
-      atual.push(h); tam += h.length;
+      const th = tamTexto(h);
+      if ((quebra && tam > 2500) || (tam + th > MAX_CAP && tam > 0)) { partes.push(atual.join('')); atual = []; tam = 0; }
+      atual.push(h); tam += th;
       if (el.nodeType === 1) antTit = tit || el.tagName === 'HR' ? true : false;
     }
     if (atual.length) partes.push(atual.join(''));
@@ -277,7 +281,14 @@ const Formatos = (() => {
     const caps = [];
     let atual = [], titulo = '';
     const flush = () => { if (atual.length) caps.push({ titulo, html: atual.join(''), ids: [], path: 'html' }); atual = []; };
-    const plano = tmp.querySelectorAll(':scope > *').length > 3 ? tmp : (tmp.firstElementChild || tmp);
+    // conteúdo embrulhado num único bloco: desce para o bloco que tem o texto (não para o primeiro, que pode ser só o título)
+    let plano = tmp;
+    const filhos = Array.from(tmp.children);
+    if (filhos.length && filhos.length <= 3) {
+      const total = tmp.textContent.length || 1;
+      const maior = filhos.reduce((a, b) => (b.textContent.length > a.textContent.length ? b : a));
+      if (maior.textContent.length / total > 0.9 && maior.children.length > 1) plano = maior;
+    }
     for (const el of Array.from(plano.childNodes)) {
       if (el.nodeType === 1 && /^H[12]$/.test(el.tagName)) { flush(); titulo = el.textContent.trim().slice(0, 90); }
       atual.push(el.nodeType === 1 ? el.outerHTML : esc(el.nodeValue || ''));

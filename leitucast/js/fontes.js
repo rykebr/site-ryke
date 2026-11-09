@@ -178,7 +178,45 @@ const Fontes = (() => {
       const doc = new DOMParser().parseFromString(html, 'text/html');
       doc.querySelectorAll('.ws-noexport,.noprint,.headertemplate,#navigationHeader,#navigationNotes,.mw-editsection,.reference,.mw-references-wrap,.references,style,script,link,.metadata,.navbox,.licenseContainer,table.licenseContainer,.ws-summary').forEach((x) => x.remove());
       doc.querySelectorAll('[style]').forEach((x) => x.removeAttribute('style'));
+      // ilustrações: endereço completo, na melhor resolução oferecida (srcset 2x)
+      doc.querySelectorAll('img').forEach((im) => {
+        let src = im.getAttribute('src') || '';
+        if (src.startsWith('//')) src = 'https:' + src;
+        if (!/^https:\/\/(upload|thumb)\.wikimedia\.org\//.test(src) || (+im.getAttribute('width') || 99) < 40) { im.remove(); return; }
+        // versão de 640 px (nítida no celular sem pesar); se a original for menor, fica a miniatura da página
+        const larga = (+im.getAttribute('data-file-width') || 0) > 640 && /\/\d+px-[^/]+$/.test(src) ? src.replace(/\/\d+px-([^/]+)$/, '/640px-$1') : '';
+        im.setAttribute('src', larga || src);
+        if (larga) im.setAttribute('data-reserva', src);
+        im.removeAttribute('srcset'); im.removeAttribute('loading');
+      });
+      // tira o embrulho do MediaWiki: os blocos do texto ficam soltos (o leitor divide os capítulos pelos títulos)
+      const emb = doc.body.querySelector(':scope > .mw-parser-output');
+      if (emb) emb.replaceWith(...emb.childNodes);
       return doc;
+    };
+    /* baixa as ilustrações e embute no livro (funciona sem internet); a que falhar sai sem quebrar nada */
+    const embutirImagens = async (html) => {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const ims = Array.from(doc.querySelectorAll('img')).slice(0, 120);
+      doc.querySelectorAll('img').forEach((im, k) => { if (k >= 120) im.remove(); });
+      let i = 0;
+      const vez = async () => {
+        while (i < ims.length) {
+          const im = ims[i++];
+          try {
+            let bl;
+            try { bl = await buscar(im.getAttribute('src'), { tipo: 'blob', ms: 20000 }); } catch (e) {
+              if (!im.getAttribute('data-reserva')) throw e;
+              bl = await buscar(im.getAttribute('data-reserva'), { tipo: 'blob', ms: 20000 });
+            }
+            im.removeAttribute('data-reserva');
+            if (!/^image\//.test(bl.type) || bl.size > 2500000) throw new Error('img');
+            im.setAttribute('src', await new Promise((ok, erro) => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.onerror = erro; fr.readAsDataURL(bl); }));
+          } catch (e) { im.remove(); }
+        }
+      };
+      await Promise.all([1, 2, 3, 4].map(vez));
+      return doc.body.innerHTML;
     };
     const base = await pegar(titulo);
     const t = base.titulo;
@@ -208,18 +246,31 @@ const Fontes = (() => {
           const h = d.body.querySelector('h1,h2,h3,h4');
           if (h && h.textContent.trim()) { nome = h.textContent.trim(); h.remove(); }
           caps[k] = `<h2>${esc(nome)}</h2>` + d.body.innerHTML;
-        } catch (e) { caps[k] = ''; falhas++; }
+        } catch (e) { caps[k] = null; }
         feitos++;
-        if (progresso) progresso(feitos / subs.length, 0);
+        if (progresso) progresso(Math.min(0.95, feitos / subs.length), 0);
       }
     };
-    let falhas = 0;
     await Promise.all([1, 2, 3].map(trabalhador));
+    // segunda rodada, um de cada vez e com calma, para os capítulos que o Wikisource recusou por excesso de pedidos
+    let falhas = 0;
+    for (let k = 0; k < subs.length; k++) {
+      if (caps[k] !== null) continue;
+      await new Promise((r) => setTimeout(r, 1200));
+      try {
+        const p = await pegar(subs[k]);
+        const d = limpar(p.html);
+        const h = d.body.querySelector('h1,h2,h3,h4');
+        let nome = subs[k].slice(t.length + 1).split('/').pop();
+        if (h && h.textContent.trim()) { nome = h.textContent.trim(); h.remove(); }
+        caps[k] = `<h2>${esc(nome)}</h2>` + d.body.innerHTML;
+      } catch (e) { caps[k] = ''; falhas++; }
+    }
     // livro pela metade não serve: melhor avisar e tentar de novo depois
     if (falhas > Math.max(1, subs.length * 0.05)) throw new Error('ws_incompleto');
     partes.push(...caps.filter(Boolean));
-    const corpo = partes.join('\n');
-    const texto = corpo.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    const corpo = await embutirImagens(partes.join('\n'));
+    const texto = corpo.replace(/<img[^>]*>/g, '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
     if (texto.length < 800 || ehBloqueio(texto.slice(0, 3000))) throw new Error('ws_vazio');
     const autor = (base.html.match(/header_author_text[^>]*>([^<]+)</) || base.html.match(/header&#95;author&#95;text[^>]*>([^<]+)</) || [])[1] || '';
     const html = `<!doctype html><html lang="pt"><head><meta charset="utf-8"><title>${esc(t.replace(/\s*\(.*\)$/, ''))}</title><meta name="author" content="${esc(autor)}"></head><body>${corpo}</body></html>`;

@@ -54,8 +54,8 @@ const Leitor = (() => {
       <div class="lt-palco" id="ltPalco">
         <div class="lt-livro" id="ltLivro">
           <div class="lt-borda-paginas"></div>
-          <div class="lt-folha" id="ltFolha" hidden><div class="lt-face lt-frente"><div class="lt-tom"></div></div><div class="lt-face lt-verso"><div class="lt-tom"></div></div><div class="lt-luz"></div></div>
-          <div class="lt-sombra" id="ltSombra" hidden></div>
+          <div class="lt-folha lt-oculto" id="ltFolha"><div class="lt-face lt-frente"><div class="lt-tom"></div></div><div class="lt-face lt-verso"><div class="lt-tom"></div></div><div class="lt-luz"></div></div>
+          <div class="lt-sombra lt-oculto" id="ltSombra"></div>
           <div class="lt-lombada"></div>
         </div>
         <div class="lt-medida" aria-hidden="true"></div>
@@ -68,7 +68,7 @@ const Leitor = (() => {
     $('.lt-frente', raiz).appendChild(pg.F);
     $('.lt-verso', raiz).appendChild(pg.V);
     $('.lt-medida', raiz).appendChild(pg.M);
-    pg.S.hidden = true;
+    pg.S.classList.add('lt-oculto');
     ligarGestos();
   }
 
@@ -300,19 +300,41 @@ const Leitor = (() => {
       pg.S.dataset.slot = 'D';
       pg.D.classList.add('escondida');
     }
-    pg.S.hidden = false;
-    folha.hidden = false;
-    sombra.hidden = false;
+    // visibility em vez de display:none: o capítulo continua diagramado e mostrar a folha não refaz o layout
+    pg.S.classList.remove('lt-oculto');
+    folha.classList.remove('lt-oculto');
+    sombra.classList.remove('lt-oculto');
     sombra.dataset.dir = dir > 0 ? 'f' : 't';
     ajustarFolha(dir > 0 ? 0 : -180, dir);
   }
   function encerrarFolha() {
-    $('#ltFolha', raiz).hidden = true;
-    $('#ltSombra', raiz).hidden = true;
-    pg.S.hidden = true;
+    $('#ltFolha', raiz).classList.add('lt-oculto');
+    $('#ltSombra', raiz).classList.add('lt-oculto');
+    pg.S.classList.add('lt-oculto');
     pg.V.classList.remove('verso-papel');
   }
-  function animar(de, ate, ms, dir, curva = easing) {
+  /* a animação roda na placa de vídeo (Web Animations: transform/opacity vão para a thread do compositor),
+     então segue lisa mesmo se o JavaScript estiver ocupado; a curva é amostrada em quadros-chave */
+  async function animar(de, ate, ms, dir, curva = easing) {
+    if (!Element.prototype.animate) return animarJs(de, ate, ms, dir, curva);
+    if (!fx || !fx.folha.isConnected) fx = { folha: $('#ltFolha', raiz), sombra: $('#ltSombra', raiz), tons: $$('.lt-tom', raiz) };
+    const N = Math.max(8, Math.round(ms / 16));
+    const kF = [], kT = [], kS = [];
+    for (let i = 0; i <= N; i++) {
+      const ang = de + (ate - de) * curva(i / N);
+      const k = Math.sin((Math.abs(ang) * Math.PI) / 180);
+      const p = Math.abs(ang) / 180;
+      kF.push({ transform: `rotateY(${ang.toFixed(2)}deg)` });
+      kT.push({ opacity: k.toFixed(3) });
+      kS.push({ opacity: k.toFixed(3), transform: `scaleX(${(0.3 + p * 0.5).toFixed(3)})` });
+    }
+    const op = { duration: ms, easing: 'linear', fill: 'forwards' };
+    const anims = [fx.folha.animate(kF, op), fx.sombra.animate(kS, op), ...fx.tons.map((t) => t.animate(kT, op))];
+    try { await anims[0].finished; } catch (e) { /* cancelada */ }
+    ajustarFolha(ate, dir); // deixa o estado final fixo antes de tirar as animações (sem piscar)
+    for (const a of anims) a.cancel();
+  }
+  function animarJs(de, ate, ms, dir, curva = easing) {
     return new Promise((res) => {
       const t0 = performance.now();
       const passo = (t) => {
@@ -375,13 +397,15 @@ const Leitor = (() => {
       destravarSePreso();
       if (e.button > 0 || animando) return;
       if (e.target.closest('a,button,.lt-menu-sel')) return;
-      g = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId, arrastando: false, dir: 0, alvo: null, pronto: null, rastro: [] };
+      g = { x: e.clientX, y: e.clientY, t: performance.now(), t0: e.timeStamp || performance.now(), id: e.pointerId, arrastando: false, dir: 0, alvo: null, pronto: null, rastro: [] };
       toque = setTimeout(() => { if (g && !g.arrastando) g.longo = true; }, 480);
     });
     palco.addEventListener('pointermove', (e) => {
       if (!g || e.pointerId !== g.id) return;
       const dx = e.clientX - g.x, dy = e.clientY - g.y;
-      const agora = performance.now();
+      // horário real do movimento (e.timeStamp), não o de quando o código rodou: com a página ocupada os eventos
+      // chegam atrasados e o peteleco parecia lento
+      const agora = e.timeStamp || performance.now();
       g.ux = e.clientX;
       g.rastro.push([agora, e.clientX]);
       while (g.rastro.length > 2 && agora - g.rastro[0][0] > 120) g.rastro.shift();
@@ -395,6 +419,7 @@ const Leitor = (() => {
         }
         clearTimeout(toque);
         palco.classList.add('arrastando');
+        palco.classList.toggle('mouse', e.pointerType === 'mouse'); // no PC o Chrome segue estendendo a seleção: bloqueia em todo o texto
         g.arrastando = true;
         g.dir = dx < 0 ? 1 : -1;
         // quanto o dedo pode andar: da posição inicial até a borda do livro do outro lado
@@ -436,14 +461,20 @@ const Leitor = (() => {
         return;
       }
       if (cfg.virar !== 'folha') { if (Math.abs(dx) > 40) virar(gg.dir); return; }
+      // velocidade dos últimos ~120 ms, medida NA HORA de soltar (antes de esperar a folha ficar pronta,
+      // senão um peteleco rápido parecia lento e a página voltava): peteleco curto vira, puxar de volta desiste
+      const fimT = e.timeStamp || performance.now();
+      const r0 = gg.rastro[0] || [gg.t0, gg.x];
+      const vJanela = (x - r0[1]) / Math.max(fimT - r0[0], 16); // px/ms, negativo = para a esquerda
+      // gesto inteiro curto e rápido (< 300 ms) também é peteleco
+      const dtTotal = fimT - gg.t0;
+      const vTotal = dtTotal < 300 ? (x - gg.x) / Math.max(dtTotal, 16) : 0;
+      const v = Math.abs(vTotal) > Math.abs(vJanela) && Math.sign(vTotal) === Math.sign(vJanela || vTotal) ? vTotal : vJanela;
+      const vDir = gg.dir > 0 ? -v : v;
       await gg.pronto;
       if (!gg.alvo) { animando = false; return; }
-      // velocidade dos últimos ~120 ms: um peteleco curto vira, puxar de volta desiste
-      const r0 = gg.rastro[0] || [gg.t, gg.x];
-      const v = (x - r0[1]) / Math.max(performance.now() - r0[0], 16); // px/ms, negativo = para a esquerda
-      const vDir = gg.dir > 0 ? -v : v;
       const p = fracao(gg, x);
-      const completa = vDir > 0.25 || (p > 0.5 && vDir > -0.15);
+      const completa = vDir > 0.22 || (p > 0.5 && vDir > -0.15);
       const angAgora = anguloDe(gg.dir, p);
       const angFim = completa ? (gg.dir > 0 ? -180 : 0) : (gg.dir > 0 ? 0 : -180);
       const resta = Math.abs(angFim - angAgora) / 180;

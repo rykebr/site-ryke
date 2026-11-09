@@ -1377,7 +1377,7 @@
   /* o arquivo salvo é uma página de bloqueio/erro e não o livro? (downloads antigos, antes da conferência) */
   const livroInvalido = (L) => {
     const txt = (L.amostra || '').slice(0, 4000) + ' ' + ((L.meta && L.meta.titulo) || '');
-    return Fontes.ehBloqueio(txt) || (L.palavras || 0) < 60;
+    return Fontes.ehBloqueio(txt) || ((L.palavras || 0) < 20 && !L.caps.some((c) => /<img/.test(c.html)));
   };
   async function abrirLivro(l, op = {}) {
     let item = S.estante[l.id];
@@ -1419,7 +1419,8 @@
         blob = (await Banco.get('arquivos', l.id)) || memArquivos.get(l.id);
         tela.fim(); tela.texto(`Abrindo "${item.t}"…`);
         L = await Formatos.abrir(blob, nomeArq());
-        if (livroInvalido(L)) throw Object.assign(new Error('invalido'), { amigavel: 'A biblioteca deste livro está fora do ar agora. Tente de novo daqui a pouco.' });
+        // só recusa se ainda for página de bloqueio; livro curto ou com pouco texto abre normalmente
+        if (Fontes.ehBloqueio((L.amostra || '').slice(0, 4000) + ' ' + ((L.meta && L.meta.titulo) || ''))) throw Object.assign(new Error('invalido'), { amigavel: 'A biblioteca deste livro está fora do ar agora. Tente de novo daqui a pouco.' });
       }
     } catch (e) {
       if (tela) tela.fechar();
