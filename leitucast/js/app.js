@@ -1804,7 +1804,19 @@
     if (ehIOS()) return abrirFolha(`<h2>Instalar no iPhone ou iPad</h2><ol style="line-height:1.9;color:var(--tx2)"><li>Abra este site no <b>Safari</b>.</li><li>Toque em <b>Compartilhar</b> (o quadrado com a seta para cima).</li><li>Escolha <b>Adicionar à Tela de Início</b>.</li><li>Toque em <b>Adicionar</b>. Pronto!</li></ol>`);
     abrirFolha(`<h2>Instalar o app</h2><p style="color:var(--tx2);line-height:1.7">No Chrome ou no Edge, abra o menu (⋮ ou …) e escolha <b>Instalar LeituCast</b> ou <b>Adicionar à tela inicial</b>. No computador também aparece um ícone de instalar na barra de endereço.</p>`);
   }
-  if ('serviceWorker' in navigator && location.protocol !== 'file:') addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => null));
+  /* atualização sozinha: o app instalado pode ficar dias aberto em segundo plano com o código antigo.
+     Ao voltar para a tela ele confere se há versão nova; quando a nova assume, recarrega (fora do leitor) */
+  if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+    const tinhaControle = !!navigator.serviceWorker.controller;
+    let recarregar = false;
+    const recarregarSePuder = () => { if (recarregar && !leitorAberto && !document.querySelector('.kid-leitor')) location.reload(); };
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (tinhaControle && !recarregar) { recarregar = true; recarregarSePuder(); } });
+    addEventListener('hashchange', recarregarSePuder);
+    addEventListener('load', () => navigator.serviceWorker.register('sw.js').then((reg) => {
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { reg.update().catch(() => null); recarregarSePuder(); } });
+      setInterval(() => reg.update().catch(() => null), 30 * 60 * 1000);
+    }).catch(() => null));
+  }
 
   /* ================= início ================= */
   montarNav();

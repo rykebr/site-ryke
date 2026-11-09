@@ -180,7 +180,17 @@ const Fontes = (() => {
       const doc = new DOMParser().parseFromString(html, 'text/html');
       doc.querySelectorAll('.ws-noexport,.noprint,.headertemplate,#navigationHeader,#navigationNotes,.mw-editsection,.reference,.mw-references-wrap,.references,style,script,link,.metadata,.navbox,.licenseContainer,table.licenseContainer,.ws-summary').forEach((x) => x.remove());
       doc.querySelectorAll('[style]').forEach((x) => x.removeAttribute('style'));
-      // ilustrações: endereço completo, na melhor resolução oferecida (srcset 2x)
+      // letra capitular desenhada (imagem "Initial_E…"): vira a própria letra em texto, senão a história começa
+      // com "ra uma vez" na página e na narração
+      doc.querySelectorAll('img').forEach((im) => {
+        const a = im.closest('a');
+        const nome = decodeURIComponent((a && a.getAttribute('href')) || im.getAttribute('src') || '');
+        const m = nome.match(/(?:^|[/:])(?:Initial|Inicial|Capitular|Lettrine|Letra|Drop[_ ]?cap)[_ -]+([A-Za-zÀ-ÚÇ])(?=[_ .-])/i);
+        if (!m) return;
+        const alvo = im.closest('figure') || a || im;
+        alvo.replaceWith(doc.createTextNode(m[1].toUpperCase()));
+      });
+      // ilustrações: endereço completo, na resolução certa para o celular
       doc.querySelectorAll('img').forEach((im) => {
         let src = im.getAttribute('src') || '';
         if (src.startsWith('//')) src = 'https:' + src;
