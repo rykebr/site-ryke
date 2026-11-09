@@ -425,6 +425,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 .lt-corpo { position: relative; min-height: 0; }
 .lt-corpo > div { position: absolute; inset: 0; }
 .lt-palco { position: absolute; inset: 0; display: grid; place-items: center; overflow: hidden; touch-action: pan-y; user-select: text; -webkit-user-select: text; }
+.lt-palco.arrastando, .lt-palco.arrastando * { user-select: none; -webkit-user-select: none; cursor: grabbing; }
 .lt-livro { position: relative; perspective: 2400px; transform-style: preserve-3d; }
 .lt-livro.entra-f { animation: entraF .28s ease; }
 .lt-livro.entra-t { animation: entraT .28s ease; }
@@ -639,3 +640,9 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 .lt-palco, .lt-topo, .lt-rodape { min-width: 0; max-width: 100vw; }
 .lt-rodape .info > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lt-topo > div { min-width: 0; }
+/* tela "baixando o livro" antes de abrir */
+.baixa-livro { background: #2B2622; min-height: 100%; position: absolute; inset: 0; padding: 24px; text-align: center; }
+.baixa-livro span { font-weight: 600; max-width: 320px; }
+.baixa-livro .barra-prog { width: min(280px, 80vw); height: 6px; border-radius: 99px; background: rgba(255,255,255,.14); overflow: hidden; }
+.baixa-livro .barra-prog i { display: block; height: 100%; background: #E8B04B; border-radius: 99px; transition: width .25s ease; }
+.baixa-livro small { opacity: .7; font-size: 12.5px; }

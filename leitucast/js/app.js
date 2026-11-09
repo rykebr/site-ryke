@@ -943,7 +943,7 @@
   /* fonte de um livro do acervo livre (mesmo em itens antigos sem o campo src) */
   const memArquivos = new Map();
   const fonteDe = (x) => (x && (x.src || (/^(gb|ws):/.test(x.id || '') ? x.id : ''))) || '';
-  async function baixarParaEstante(l, folha, forcar) {
+  async function baixarParaEstante(l, folha, forcar, aoProgresso) {
     if (!forcar && S.estante[l.id] && S.estante[l.id].baixado) return true;
     if (l.conferir && l.src.startsWith('gb:')) {
       const ok = await Lia.conferirDominio(l.src.slice(3));
@@ -952,7 +952,7 @@
     const box = folha ? $('#detBaixa', folha.f) : null;
     if (box) box.innerHTML = `<div class="baixando"><span class="spinner"></span><div class="barra-prog"><i id="barBaixa" style="width:3%"></i></div><small id="txtBaixa">Baixando…</small></div>`;
     try {
-      const blob = await Fontes.baixarLivro(l.src, (p, n) => { const b = box && $('#barBaixa', box); if (b) b.style.width = Math.max(3, Math.round(p * 100)) + '%'; const t = box && $('#txtBaixa', box); if (t) t.textContent = (n / 1048576).toFixed(1) + ' MB'; });
+      const blob = await Fontes.baixarLivro(l.src, (p, n) => { if (aoProgresso) aoProgresso(p, n); const b = box && $('#barBaixa', box); if (b) b.style.width = Math.max(3, Math.round(p * 100)) + '%'; const t = box && $('#txtBaixa', box); if (t) t.textContent = (n / 1048576).toFixed(1) + ' MB'; });
       memArquivos.set(l.id, blob); // se o navegador recusar guardar (Safari privado, pouco espaço), o livro abre da memória
       await Banco.set('arquivos', l.id, blob);
       const ant = S.estante[l.id];
@@ -1362,28 +1362,67 @@
   /* ================= LEITOR ================= */
   let leitorAberto = null;
   const secLeitor = $('#leitor');
+  /* tela cheia "baixando o livro" com barra: o livro só abre depois de baixado e conferido */
+  function telaBaixandoLivro(t) {
+    secLeitor.hidden = false;
+    secLeitor.innerHTML = `<div class="carregando baixa-livro" style="color:#EDE6DA"><img src="img/logo.svg" alt="" width="56"><span id="blTit">Baixando "${esc(t)}"…</span><div class="barra-prog"><i id="blBarra" style="width:3%"></i></div><small id="blTxt">Preparando o livro para ler e ouvir, mesmo sem internet</small></div>`;
+    let falso = 3, tm = setInterval(() => { falso = Math.min(88, falso + (90 - falso) * 0.04); const b = $('#blBarra'); if (b && !b.dataset.real) b.style.width = falso + '%'; }, 250);
+    return {
+      prog: (p, n) => { const b = $('#blBarra'); if (b && p > 0) { b.dataset.real = 1; b.style.width = Math.max(3, Math.round(p * 100)) + '%'; } const x = $('#blTxt'); if (x && n) x.textContent = (n / 1048576).toFixed(1) + ' MB'; },
+      texto: (s) => { const x = $('#blTit'); if (x) x.textContent = s; },
+      fim: () => { clearInterval(tm); const b = $('#blBarra'); if (b) b.style.width = '100%'; },
+      fechar: () => { clearInterval(tm); secLeitor.hidden = true; secLeitor.innerHTML = ''; },
+    };
+  }
+  /* o arquivo salvo é uma página de bloqueio/erro e não o livro? (downloads antigos, antes da conferência) */
+  const livroInvalido = (L) => {
+    const txt = (L.amostra || '').slice(0, 4000) + ' ' + ((L.meta && L.meta.titulo) || '');
+    return Fontes.ehBloqueio(txt) || (L.palavras || 0) < 60;
+  };
   async function abrirLivro(l, op = {}) {
     let item = S.estante[l.id];
-    if (!item || !item.baixado) {
-      if (!l.src && !(item && item.imp)) return abrirDetalhe(l);
-      toast('Baixando o livro…', 8000);
-      const ok = await baixarParaEstante(l);
-      if (!ok) return;
+    const src = fonteDe(item) || fonteDe(l);
+    let tela = null;
+    const baixar = async (forcar, msg) => {
+      tela = tela || telaBaixandoLivro((item || l).t);
+      if (msg) tela.texto(msg);
+      const ok = await baixarParaEstante({ ...(item || {}), ...l, src, livre: true }, null, forcar, tela.prog);
+      if (!ok) { tela.fechar(); tela = null; return false; }
       item = S.estante[l.id];
+      return true;
+    };
+    if (!item || !item.baixado) {
+      if (!src && !(item && item.imp)) return abrirDetalhe(l);
+      if (!await baixar(false)) return;
     }
     let blob = (await Banco.get('arquivos', l.id)) || memArquivos.get(l.id);
     // livro do acervo livre sem o arquivo neste aparelho (estante veio da nuvem, ou o celular limpou o espaço): baixa de novo sozinho
-    const src = fonteDe(item) || fonteDe(l);
     if (!blob && src) {
-      toast('Baixando o livro de novo neste aparelho…', 8000);
-      if (await baixarParaEstante({ ...item, ...l, src, livre: true }, null, true)) blob = (await Banco.get('arquivos', l.id)) || memArquivos.get(l.id);
-      if (!blob) { toast('Não consegui baixar o livro agora. Confira a internet e tente de novo.', 4500); return; }
+      if (!await baixar(true, `Baixando "${item.t}" neste aparelho…`)) return;
+      blob = (await Banco.get('arquivos', l.id)) || memArquivos.get(l.id);
+      if (!blob) { if (tela) tela.fechar(); toast('Não consegui baixar o livro agora. Confira a internet e tente de novo.', 4500); return; }
     }
     if (!blob) { item.baixado = false; salvar(); toast('Este é um ebook que você importou em outro aparelho. Importe o arquivo aqui também para ler.', 5000); return; }
+    if (tela) tela.fim();
     secLeitor.hidden = false;
-    secLeitor.innerHTML = `<div class="carregando" style="color:#EDE6DA"><img src="img/logo.svg" alt="" width="56"><span>Abrindo "${esc(item.t)}"…</span></div>`;
+    if (!tela) secLeitor.innerHTML = `<div class="carregando" style="color:#EDE6DA"><img src="img/logo.svg" alt="" width="56"><span>Abrindo "${esc(item.t)}"…</span></div>`;
+    else tela.texto(`Abrindo "${item.t}"…`);
+    const nomeArq = () => item.arquivo || (l.id.replace(/[^a-z0-9]/gi, '_') + '.epub');
     let L;
-    try { L = await Formatos.abrir(blob, item.arquivo || (l.id.replace(/[^a-z0-9]/gi, '_') + '.epub')); } catch (e) {
+    try {
+      L = await Formatos.abrir(blob, nomeArq());
+      // veio uma página de bloqueio no lugar do livro: apaga e baixa de novo (com a conferência nova), sem mostrar o erro
+      if (src && livroInvalido(L)) {
+        memArquivos.delete(l.id);
+        try { await Banco.del('arquivos', l.id); } catch (er) { /* já não estava */ }
+        if (!await baixar(true, `Baixando "${item.t}" de novo…`)) return;
+        blob = (await Banco.get('arquivos', l.id)) || memArquivos.get(l.id);
+        tela.fim(); tela.texto(`Abrindo "${item.t}"…`);
+        L = await Formatos.abrir(blob, nomeArq());
+        if (livroInvalido(L)) throw Object.assign(new Error('invalido'), { amigavel: 'A biblioteca deste livro está fora do ar agora. Tente de novo daqui a pouco.' });
+      }
+    } catch (e) {
+      if (tela) tela.fechar();
       secLeitor.hidden = true; secLeitor.innerHTML = '';
       toast(e.amigavel || 'Não consegui abrir este livro.', 4500); return;
     }

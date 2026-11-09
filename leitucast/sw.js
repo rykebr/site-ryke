@@ -1,7 +1,7 @@
 // Service worker do LeituCast Ingrid: o app abre offline. Busca a versão nova na rede e usa a cópia salva sem internet.
 // Os livros baixados ficam no IndexedDB e as vozes abertas no Cache Storage (lc-vozes-v1), fora deste cache.
-const CACHE = 'leitucast-v11';
-const V = '?v=11';
+const CACHE = 'leitucast-v13';
+const V = '?v=13';
 const CORE = ['./', 'index.html', 'manifest.webmanifest', 'css/fontes.css', 'css/app.css' + V,
   'js/util.js' + V, 'js/conhecimento.js' + V, 'js/saber.js' + V, 'js/ia-pesos.js' + V, 'js/fontes.js' + V, 'js/ia.js' + V, 'js/formatos.js' + V, 'js/leitor.js' + V,
   'js/narrador.js' + V, 'js/cerebro.js' + V, 'js/infantil.js' + V, 'js/nuvem.js' + V, 'js/app.js' + V, 'js/voz-piper.js' + V, 'vendor/jszip.min.js',

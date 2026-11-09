@@ -359,81 +359,110 @@ const Leitor = (() => {
   }
 
   /* ---------- gestos ---------- */
+  /* a folha "gruda" no dedo: a borda da página fica sempre embaixo do dedo (ângulo = acos da posição),
+     então qualquer movimento, lento ou rápido, já mostra a página dobrando. Segurar antes de arrastar também vale. */
+  const RAD = 180 / Math.PI;
+  const anguloDe = (dir, p) => (dir > 0 ? -Math.acos(1 - 2 * p) : -Math.acos(2 * p - 1)) * RAD;
   function ligarGestos() {
     const palco = $('#ltPalco', raiz);
     let g = null, toque = 0;
+    const fracao = (gg, x) => {
+      const dx = x - gg.x;
+      if ((gg.dir > 0 && dx > 0) || (gg.dir < 0 && dx < 0)) return 0;
+      return clamp(Math.abs(dx) / gg.curso, 0, 1);
+    };
     palco.addEventListener('pointerdown', (e) => {
       destravarSePreso();
       if (e.button > 0 || animando) return;
       if (e.target.closest('a,button,.lt-menu-sel')) return;
-      g = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId, arrastando: false, dir: 0, alvo: null, pronto: null };
+      g = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId, arrastando: false, dir: 0, alvo: null, pronto: null, rastro: [] };
       toque = setTimeout(() => { if (g && !g.arrastando) g.longo = true; }, 480);
     });
     palco.addEventListener('pointermove', (e) => {
-      if (!g || e.pointerId !== g.id || g.longo) return;
+      if (!g || e.pointerId !== g.id) return;
       const dx = e.clientX - g.x, dy = e.clientY - g.y;
-      g.dx = dx;
+      const agora = performance.now();
+      g.ux = e.clientX;
+      g.rastro.push([agora, e.clientX]);
+      while (g.rastro.length > 2 && agora - g.rastro[0][0] > 120) g.rastro.shift();
       if (!g.arrastando) {
-        if (Math.abs(dx) < 12 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
-        if (window.getSelection && String(getSelection()).length) return;
+        if (Math.abs(dx) < 8 || Math.abs(dx) < Math.abs(dy) * 1.1) return;
+        const sel = window.getSelection ? getSelection() : null;
+        if (sel && String(sel).length) {
+          // segurou parado e o aparelho selecionou uma palavra: respeita (quer copiar/marcar)
+          if (g.longo && e.pointerType !== 'mouse') return;
+          try { sel.removeAllRanges(); } catch (er) { /* nada */ } // seleção acidental do arrasto
+        }
         clearTimeout(toque);
+        palco.classList.add('arrastando');
         g.arrastando = true;
         g.dir = dx < 0 ? 1 : -1;
+        // quanto o dedo pode andar: da posição inicial até a borda do livro do outro lado
+        const r = $('#ltLivro', raiz).getBoundingClientRect();
+        g.curso = Math.max(geo.W * 0.45, g.dir > 0 ? g.x - r.left : r.right - g.x);
         try { palco.setPointerCapture(e.pointerId); } catch (er) { /* sem captura */ }
         if (cfg.virar === 'folha') {
           travar();
-          g.pronto = (g.dir > 0 ? alvoFrente() : alvoTras()).then(async (alvo) => {
-            g.alvo = alvo;
-            if (alvo) {
-              await prepararFolha(g.dir, alvo);
-              const p0 = clamp(Math.abs(g.dx || 0) / (geo.W * 0.95), 0, 1);
-              g.p = p0;
-              ajustarFolha(g.dir > 0 ? -180 * p0 : -180 * (1 - p0), g.dir);
-            } else animando = false;
+          const gg = g;
+          gg.pronto = (gg.dir > 0 ? alvoFrente() : alvoTras()).then(async (alvo) => {
+            if (!alvo) { animando = false; return; }
+            await prepararFolha(gg.dir, alvo);
+            gg.alvo = alvo; // só depois da folha pronta, para não mexer numa folha vazia
+            if (g === gg) ajustarFolha(anguloDe(gg.dir, fracao(gg, gg.ux)), gg.dir);
           });
         }
       }
-      if (g.arrastando && cfg.virar === 'folha' && g.alvo) {
-        const p = clamp(Math.abs(dx) / (geo.W * 0.95), 0, 1);
-        if ((g.dir > 0 && dx > 0) || (g.dir < 0 && dx < 0)) return;
-        g.p = p;
-        ajustarFolha(g.dir > 0 ? -180 * p : -180 * (1 - p), g.dir);
+      if (g.arrastando && cfg.virar === 'folha' && g.alvo && !g.raf) {
+        // um ajuste por quadro, sempre com a posição mais recente do dedo
+        g.raf = requestAnimationFrame(() => {
+          if (!g) return;
+          g.raf = 0;
+          animandoDesde = performance.now(); // dedo ainda segurando: a trava de segurança não solta
+          ajustarFolha(anguloDe(g.dir, fracao(g, g.ux)), g.dir);
+        });
       }
     });
     const solta = async (e) => {
       clearTimeout(toque);
       if (!g || (e.pointerId !== undefined && e.pointerId !== g.id)) return;
       const gg = g; g = null;
+      palco.classList.remove('arrastando');
+      if (gg.raf) cancelAnimationFrame(gg.raf);
       const dt = performance.now() - gg.t;
-      const dx = e.clientX - gg.x;
-      if (gg.longo) return;
+      const x = e.clientX || gg.ux || gg.x;
+      const dx = x - gg.x;
       if (!gg.arrastando) {
-        if (dt < 450 && Math.abs(dx) < 10) tocar(e);
+        if (!gg.longo && dt < 450 && Math.abs(dx) < 10) tocar(e);
         return;
       }
       if (cfg.virar !== 'folha') { if (Math.abs(dx) > 40) virar(gg.dir); return; }
       await gg.pronto;
       if (!gg.alvo) { animando = false; return; }
-      const v = Math.abs(dx) / Math.max(dt, 1);
-      const p = ((gg.dir > 0 && dx < 0) || (gg.dir < 0 && dx > 0)) ? clamp(Math.abs(dx) / (geo.W * 0.95), 0, 1) : 0;
-      const completa = p > 0.3 || v > 0.45;
-      const angAgora = gg.dir > 0 ? -180 * p : -180 * (1 - p);
+      // velocidade dos últimos ~120 ms: um peteleco curto vira, puxar de volta desiste
+      const r0 = gg.rastro[0] || [gg.t, gg.x];
+      const v = (x - r0[1]) / Math.max(performance.now() - r0[0], 16); // px/ms, negativo = para a esquerda
+      const vDir = gg.dir > 0 ? -v : v;
+      const p = fracao(gg, x);
+      const completa = vDir > 0.25 || (p > 0.5 && vDir > -0.15);
+      const angAgora = anguloDe(gg.dir, p);
+      const angFim = completa ? (gg.dir > 0 ? -180 : 0) : (gg.dir > 0 ? 0 : -180);
+      const resta = Math.abs(angFim - angAgora) / 180;
+      const ms = clamp(380 * resta / Math.max(1, Math.abs(vDir) * 2.2), 120, 420);
       registrarTempo();
+      await animar(angAgora, angFim, ms, gg.dir);
       if (completa) {
-        await animar(angAgora, gg.dir > 0 ? -180 : 0, 300 * (1 - p) + 120, gg.dir);
         pos = { c: gg.alvo.c, col: gg.alvo.col };
         await pintarAtual();
         salvarPosicao();
-      } else {
-        await animar(angAgora, gg.dir > 0 ? 0 : -180, 260, gg.dir);
-        await pintarAtual();
-      }
+      } else await pintarAtual();
       encerrarFolha();
       animando = false;
     };
     palco.addEventListener('pointerup', solta);
     palco.addEventListener('pointercancel', solta);
-    palco.addEventListener('lostpointercapture', (e) => { if (g && g.arrastando) solta(e); });
+    // só conta quando o PALCO perde o dedo; o aviso que vem do texto (captura implícita do toque passando
+    // para o palco) não é soltar o dedo, e tratá-lo assim cortava todo arrasto que não fosse um peteleco
+    palco.addEventListener('lostpointercapture', (e) => { if (g && g.arrastando && e.target === palco) setTimeout(() => { if (g && g.arrastando && g.id === e.pointerId) solta(e); }, 0); });
     palco.addEventListener('wheel', (e) => {
       if (Math.abs(e.deltaY) < 8 && Math.abs(e.deltaX) < 8) return;
       e.preventDefault();

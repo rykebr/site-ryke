@@ -149,29 +149,126 @@ const Fontes = (() => {
     },
   };
 
-  /* Baixa o arquivo de um livro gratuito (EPUB) e devolve um Blob */
+  /* Página de bloqueio anti-robô (Anubis, Cloudflare...) ou de erro no lugar do livro */
+  // dois sinais (ou um num texto curto), para um livro que cite "Anúbis" ou "captcha" não ser confundido
+  const RX_BLOQUEIO = /anubis|n[aã]o [eé] um bot|not a bot|making sure you|checking your browser|verifique se voc[eê]|just a moment|captcha|access denied|cf-chl|recarregue a p[aá]gina|enable javascript|hashcash|proof-of-work|prova de valida/gi;
+  const ehBloqueio = (txt) => {
+    const s = String(txt || '').slice(0, 6000);
+    const achados = new Set((s.match(RX_BLOQUEIO) || []).map((x) => x.toLowerCase()));
+    return achados.size >= 2 || (achados.size === 1 && s.replace(/\s+/g, ' ').length < 1500);
+  };
+
+  /* Monta o livro direto do Wikisource (API pública com CORS), página principal + capítulos (subpáginas) */
+  async function wikisourceHtml(titulo, progresso) {
+    const api = (p) => `https://pt.wikisource.org/w/api.php?action=parse&prop=text&format=json&formatversion=2&redirects=1&disableeditsection=1&disablelimitreport=1&origin=*&page=${encodeURIComponent(p.replace(/ /g, '_'))}`;
+    const pegar = async (p) => {
+      let erro;
+      for (let k = 0; k < 4; k++) {
+        try {
+          const d = await buscar(api(p), { ms: 20000 });
+          if (d && d.parse) return { titulo: d.parse.title, html: d.parse.text };
+          erro = new Error('ws_sem_pagina');
+          if (d && d.error && d.error.code === 'missingtitle') break;
+        } catch (e) { erro = e; }
+        await new Promise((r) => setTimeout(r, 600 * (k + 1))); // o Wikisource limita pedidos seguidos
+      }
+      throw erro;
+    };
+    const limpar = (html) => {
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      doc.querySelectorAll('.ws-noexport,.noprint,.headertemplate,#navigationHeader,#navigationNotes,.mw-editsection,.reference,.mw-references-wrap,.references,style,script,link,.metadata,.navbox,.licenseContainer,table.licenseContainer,.ws-summary').forEach((x) => x.remove());
+      doc.querySelectorAll('[style]').forEach((x) => x.removeAttribute('style'));
+      return doc;
+    };
+    const base = await pegar(titulo);
+    const t = base.titulo;
+    const docBase = limpar(base.html);
+    // capítulos: links para subpáginas "Título/…", na ordem em que aparecem no índice
+    const vistos = new Set(), subs = [];
+    for (const a of new DOMParser().parseFromString(base.html, 'text/html').querySelectorAll('a[href^="/wiki/"]')) {
+      let alvo = '';
+      try { alvo = decodeURIComponent(a.getAttribute('href').slice(6).split('#')[0]).replace(/_/g, ' '); } catch (e) { continue; }
+      if (alvo.startsWith(t + '/') && !vistos.has(alvo)) { vistos.add(alvo); subs.push(alvo); }
+    }
+    const partes = [];
+    const textoBase = docBase.body.textContent.replace(/\s+/g, ' ').trim();
+    if (!subs.length || textoBase.length > 3000) partes.push(`<h1>${esc(t.replace(/\s*\(.*\)$/, ''))}</h1>` + docBase.body.innerHTML);
+    else partes.push(`<h1>${esc(t.replace(/\s*\(.*\)$/, ''))}</h1>`);
+    const caps = new Array(subs.length);
+    let feitos = 0, i = 0;
+    const trabalhador = async () => {
+      while (i < subs.length) {
+        const k = i++;
+        try {
+          const p = await pegar(subs[k]);
+          // nome do capítulo: o título que a própria página traz; senão o "ws-title"; senão o fim do endereço
+          const wsT = new DOMParser().parseFromString(p.html, 'text/html').querySelector('#ws-title i, #ws-title');
+          let nome = (wsT && wsT.textContent.split('—').pop().trim()) || subs[k].slice(t.length + 1).split('/').pop();
+          const d = limpar(p.html);
+          const h = d.body.querySelector('h1,h2,h3,h4');
+          if (h && h.textContent.trim()) { nome = h.textContent.trim(); h.remove(); }
+          caps[k] = `<h2>${esc(nome)}</h2>` + d.body.innerHTML;
+        } catch (e) { caps[k] = ''; falhas++; }
+        feitos++;
+        if (progresso) progresso(feitos / subs.length, 0);
+      }
+    };
+    let falhas = 0;
+    await Promise.all([1, 2, 3].map(trabalhador));
+    // livro pela metade não serve: melhor avisar e tentar de novo depois
+    if (falhas > Math.max(1, subs.length * 0.05)) throw new Error('ws_incompleto');
+    partes.push(...caps.filter(Boolean));
+    const corpo = partes.join('\n');
+    const texto = corpo.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+    if (texto.length < 800 || ehBloqueio(texto.slice(0, 3000))) throw new Error('ws_vazio');
+    const autor = (base.html.match(/header_author_text[^>]*>([^<]+)</) || base.html.match(/header&#95;author&#95;text[^>]*>([^<]+)</) || [])[1] || '';
+    const html = `<!doctype html><html lang="pt"><head><meta charset="utf-8"><title>${esc(t.replace(/\s*\(.*\)$/, ''))}</title><meta name="author" content="${esc(autor)}"></head><body>${corpo}</body></html>`;
+    return new Blob([html], { type: 'text/html' });
+  }
+
+  async function baixarUrl(u, progresso) {
+    const r = await fetch(u);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const total = +(r.headers.get('Content-Length') || 0);
+    let b;
+    if (!r.body || !progresso) b = await r.blob();
+    else {
+      const leitor = r.body.getReader();
+      const partes = [];
+      let n = 0;
+      for (;;) {
+        const { done, value } = await leitor.read();
+        if (done) break;
+        partes.push(value); n += value.length;
+        progresso(total ? Math.min(1, n / total) : 0, n);
+      }
+      b = new Blob(partes, { type: 'application/epub+zip' });
+    }
+    // só aceita um EPUB de verdade (começa com "PK"); página de bloqueio ou de erro não vira livro
+    const cab = new Uint8Array(await b.slice(0, 4).arrayBuffer());
+    if (!(cab[0] === 0x50 && cab[1] === 0x4b)) {
+      const e = new Error(ehBloqueio(await b.slice(0, 6000).text()) ? 'bloqueado' : 'nao_e_epub'); e.bloqueio = true; throw e;
+    }
+    if (b.size < 1000) throw new Error('arquivo vazio');
+    return b;
+  }
+
+  /* Baixa o arquivo de um livro gratuito e devolve um Blob (EPUB, ou HTML montado do Wikisource) */
   async function baixarLivro(src, progresso) {
-    const urls = src.startsWith('gb:') ? gutenberg.epubs(src.slice(3)) : src.startsWith('ws:') ? [wikisource.epub(src.slice(3))] : [];
     let ultimo;
+    if (src.startsWith('ws:')) {
+      const t = src.slice(3);
+      // 1) EPUB pronto do ws-export (duas tentativas: o bloqueio anti-robô deles vai e volta)
+      for (let k = 0; k < 2; k++) {
+        try { return await baixarUrl(wikisource.epub(t) + (k ? '&_=' + Date.now() : ''), progresso); } catch (e) { ultimo = e; }
+      }
+      // 2) direto das páginas do Wikisource
+      try { return await wikisourceHtml(t, progresso); } catch (e) { ultimo = e; }
+      throw ultimo || new Error('sem_fonte');
+    }
+    const urls = src.startsWith('gb:') ? gutenberg.epubs(src.slice(3)) : [];
     for (const u of urls) {
-      try {
-        const r = await fetch(u);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const total = +(r.headers.get('Content-Length') || 0);
-        if (!r.body || !progresso) return await r.blob();
-        const leitor = r.body.getReader();
-        const partes = [];
-        let n = 0;
-        for (;;) {
-          const { done, value } = await leitor.read();
-          if (done) break;
-          partes.push(value); n += value.length;
-          progresso(total ? n / total : 0, n);
-        }
-        const b = new Blob(partes, { type: 'application/epub+zip' });
-        if (b.size < 1000) throw new Error('arquivo vazio');
-        return b;
-      } catch (e) { ultimo = e; }
+      try { return await baixarUrl(u, progresso); } catch (e) { ultimo = e; }
     }
     throw ultimo || new Error('sem_fonte');
   }
@@ -179,5 +276,5 @@ const Fontes = (() => {
   const compra = (t, a) => `https://www.amazon.com.br/s?k=${encodeURIComponent(t + ' ' + (a || ''))}&i=stripbooks`;
   const googleLivros = (t, a) => `https://www.google.com/search?tbm=bks&q=${encodeURIComponent(t + ' ' + (a || ''))}`;
 
-  return { gutenberg, wikisource, openlibrary, wikipedia, google, baixarLivro, compra, googleLivros };
+  return { gutenberg, wikisource, openlibrary, wikipedia, google, baixarLivro, compra, googleLivros, ehBloqueio, _wikisourceHtml: wikisourceHtml };
 })();
