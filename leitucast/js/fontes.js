@@ -170,7 +170,9 @@ const Fontes = (() => {
           erro = new Error('ws_sem_pagina');
           if (d && d.error && d.error.code === 'missingtitle') break;
         } catch (e) { erro = e; }
-        await new Promise((r) => setTimeout(r, 600 * (k + 1))); // o Wikisource limita pedidos seguidos
+        // o Wikisource limita pedidos seguidos: espera mais quando ele pede calma (429/503)
+        const calma = erro && (erro.status === 429 || erro.status === 503);
+        await new Promise((r) => setTimeout(r, (calma ? 2500 : 600) * (k + 1)));
       }
       throw erro;
     };
