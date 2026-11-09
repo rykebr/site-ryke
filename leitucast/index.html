@@ -12,15 +12,17 @@
 <meta name="apple-mobile-web-app-title" content="LeituCast">
 <meta property="og:title" content="LeituCast Ingrid">
 <meta property="og:description" content="Leia e ouça livros, com uma IA que encontra clássicos gratuitos do seu gosto.">
-<meta property="og:image" content="img/og.jpg">
+<meta property="og:image" content="img/og-logo.jpg">
 <title>LeituCast Ingrid</title>
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" href="img/icon-192.png">
-<link rel="apple-touch-icon" href="img/apple-touch-icon.png">
+<link rel="icon" href="img/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="img/icone-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="img/icone-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="img/icone-apple-180.png">
 <link rel="preload" href="fontes/manrope-normal-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fontes/fraunces-normal-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/fontes.css">
-<link rel="stylesheet" href="css/app.css?v=17">
+<link rel="stylesheet" href="css/app.css?v=18">
 </head>
 <body>
 <div id="app" class="app">
@@ -28,7 +30,7 @@
     <a class="marca" href="#inicio" aria-label="LeituCast Ingrid, início"><img src="img/logo.svg" alt="" width="34" height="34"><span>LeituCast<small>Ingrid</small></span></a>
     <nav class="nav-lat" aria-label="Seções"></nav>
   </aside>
-  <main id="tela" class="tela" tabindex="-1"><div class="carregando"><img src="img/logo.svg" alt="" width="64" height="64"><span>Abrindo a biblioteca…</span></div></main>
+  <main id="tela" class="tela" tabindex="-1"><div class="carregando abertura"><img src="img/logo-biblioteca-480.webp" alt="LeituCast Ingrid" width="200" height="200"><span>Abrindo a biblioteca…</span></div></main>
   <nav class="nav" id="nav" aria-label="Seções" hidden></nav>
 </div>
 <section class="leitor" id="leitor" hidden aria-label="Leitura"></section>
@@ -37,18 +39,18 @@
 <input type="file" id="arquivos" multiple hidden accept=".epub,.pdf,.txt,.fb2,.docx,.html,.htm,.xhtml,.md,.mobi,.azw,.azw3,application/epub+zip,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
 <noscript>O LeituCast precisa de JavaScript ligado para funcionar.</noscript>
 <script src="vendor/jszip.min.js" defer></script>
-<script src="js/util.js?v=17" defer></script>
-<script src="js/conhecimento.js?v=17" defer></script>
-<script src="js/saber.js?v=17" defer></script>
-<script src="js/ia-pesos.js?v=17" defer></script>
-<script src="js/fontes.js?v=17" defer></script>
-<script src="js/ia.js?v=17" defer></script>
-<script src="js/formatos.js?v=17" defer></script>
-<script src="js/leitor.js?v=17" defer></script>
-<script src="js/narrador.js?v=17" defer></script>
-<script src="js/cerebro.js?v=17" defer></script>
-<script src="js/infantil.js?v=17" defer></script>
-<script src="js/nuvem.js?v=17" defer></script>
-<script src="js/app.js?v=17" defer></script>
+<script src="js/util.js?v=18" defer></script>
+<script src="js/conhecimento.js?v=18" defer></script>
+<script src="js/saber.js?v=18" defer></script>
+<script src="js/ia-pesos.js?v=18" defer></script>
+<script src="js/fontes.js?v=18" defer></script>
+<script src="js/ia.js?v=18" defer></script>
+<script src="js/formatos.js?v=18" defer></script>
+<script src="js/leitor.js?v=18" defer></script>
+<script src="js/narrador.js?v=18" defer></script>
+<script src="js/cerebro.js?v=18" defer></script>
+<script src="js/infantil.js?v=18" defer></script>
+<script src="js/nuvem.js?v=18" defer></script>
+<script src="js/app.js?v=18" defer></script>
 </body>
 </html>

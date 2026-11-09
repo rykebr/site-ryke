@@ -259,8 +259,8 @@
     tela.className = 'tela entrada';
     tela.onclick = null;
     tela.innerHTML = `
-      <div class="entrada-hero"><div class="arte" style="background-image:${arte('almeida', true)}"></div>
-        <div class="logo-grande"><img src="img/logo.svg" alt=""><h1><small>LeituCast</small>Ingrid</h1></div>
+      <div class="entrada-hero com-logo"><div class="arte" style="background-image:url(img/logo-biblioteca-480.webp)"></div>
+        <img class="logo-hero" src="img/logo-biblioteca.webp" alt="LeituCast Ingrid" width="900" height="900">
         <p class="lema">Leia e ouça livros como num livro de verdade. A Lia, sua IA de leitura, encontra os clássicos gratuitos do seu gosto.</p>
       </div>
       <div class="entrada-corpo">
@@ -268,7 +268,6 @@
           <a class="btn pri bloco" href="#cadastro">${ico('mais')} Criar conta nova</a>
           <button class="btn sec bloco" id="btLogin">${ico('sair')} Fazer login</button>
         </div>
-        <p class="credito">Pintura: <i>Leitura</i> (1892), de Almeida Júnior. Domínio público.</p>
       </div>`;
     $('#btLogin').onclick = abrirLogin;
   }
