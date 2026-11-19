@@ -22,6 +22,10 @@
       "destination": "https://ws-export.wmcloud.org/:path*"
     },
     {
+      "source": "/keeper/:path*/",
+      "destination": "/keeper/index.html"
+    },
+    {
       "source": "/keeper/:path*",
       "destination": "/keeper/index.html"
     }
