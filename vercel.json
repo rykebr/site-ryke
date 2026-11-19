@@ -1,33 +1,115 @@
 {
   "trailingSlash": true,
   "rewrites": [
-    { "source": "/leitucast/gutenberg/:path*/", "destination": "https://www.gutenberg.org/:path*/" },
-    { "source": "/leitucast/gutenberg/:path*", "destination": "https://www.gutenberg.org/:path*" },
-    { "source": "/leitucast/wikisource", "destination": "https://ws-export.wmcloud.org/" },
-    { "source": "/leitucast/wikisource/", "destination": "https://ws-export.wmcloud.org/" },
-    { "source": "/leitucast/wikisource/:path*", "destination": "https://ws-export.wmcloud.org/:path*" }
+    {
+      "source": "/leitucast/gutenberg/:path*/",
+      "destination": "https://www.gutenberg.org/:path*/"
+    },
+    {
+      "source": "/leitucast/gutenberg/:path*",
+      "destination": "https://www.gutenberg.org/:path*"
+    },
+    {
+      "source": "/leitucast/wikisource",
+      "destination": "https://ws-export.wmcloud.org/"
+    },
+    {
+      "source": "/leitucast/wikisource/",
+      "destination": "https://ws-export.wmcloud.org/"
+    },
+    {
+      "source": "/leitucast/wikisource/:path*",
+      "destination": "https://ws-export.wmcloud.org/:path*"
+    },
+    {
+      "source": "/keeper/:path*",
+      "destination": "/keeper/index.html"
+    }
   ],
   "headers": [
     {
-      "source": "/(.*)",
+      "source": "/((?!keeper/).*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+        }
       ]
     },
     {
       "source": "/snake/(.*)",
       "headers": [
-        { "key": "Content-Security-Policy", "value": "frame-ancestors 'self'; object-src 'none'; base-uri 'none'" }
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self'; object-src 'none'; base-uri 'none'"
+        }
       ]
     },
     {
       "source": "/leitucast/(.*)",
       "headers": [
-        { "key": "Cross-Origin-Opener-Policy", "value": "same-origin" },
-        { "key": "Cross-Origin-Embedder-Policy", "value": "credentialless" }
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Cross-Origin-Embedder-Policy",
+          "value": "credentialless"
+        }
+      ]
+    },
+    {
+      "source": "/keeper/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; media-src 'self' blob: https://*.supabase.co; connect-src 'self' blob: https://*.supabase.co wss://*.supabase.co; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "microphone=(self), camera=(), geolocation=(), payment=(), usb=()"
+        }
+      ]
+    },
+    {
+      "source": "/keeper/_expo/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
       ]
     }
   ]
