@@ -415,6 +415,41 @@ const Formatos = (() => {
       paginas.push({ linhas: linhas.filter((l) => l.t.trim()), alt: alturas[Math.floor(alturas.length / 2)] || 10 });
       if (i % 5 === 0) progresso(i / pdf.numPages);
     }
+    /* PDF escaneado (só imagens, sem texto): cada página do PDF vira uma página do livro, desenhada na hora
+       em que vai aparecer (as vizinhas ficam prontas antes, pelo cache do leitor) */
+    const letras = paginas.reduce((n, p) => n + p.linhas.reduce((m, l) => m + l.t.trim().length, 0), 0);
+    if (letras < pdf.numPages * 60) {
+      const urls = new Map();
+      const larg = Math.min(1600, Math.round((self.screen ? Math.max(screen.width, 400) : 800) * Math.min(2, self.devicePixelRatio || 1)));
+      const img = async (k) => {
+        if (urls.has(k)) return urls.get(k);
+        const n = parseInt(String(k).replace(/\D+/g, ''), 10);
+        const pr = (async () => {
+          const pg = await pdf.getPage(n);
+          const vp0 = pg.getViewport({ scale: 1 });
+          const vp = pg.getViewport({ scale: larg / vp0.width });
+          const cv = document.createElement('canvas');
+          cv.width = Math.round(vp.width); cv.height = Math.round(vp.height);
+          await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+          const bl = await new Promise((r) => cv.toBlob(r, 'image/jpeg', 0.82));
+          cv.width = cv.height = 0;
+          return bl ? URL.createObjectURL(bl) : '';
+        })();
+        urls.set(k, pr);
+        return pr;
+      };
+      const caps = [];
+      for (let i = 1; i <= pdf.numPages; i++) caps.push({ titulo: `Página ${i}`, html: `<img data-lc="pdfpg/${i}" alt="Página ${i}" class="pg-inteira">`, ids: [], path: 'pdf' });
+      let capa = null;
+      try { capa = await (await fetch(await img('pdfpg/1'))).blob(); } catch (e) { capa = null; }
+      const nome = Lia.doNomeDoArquivo(nomeArq || '');
+      const I = info.info || {};
+      const l = finalizar({ meta: { titulo: (I.Title || '').trim() || nome.titulo, autor: (I.Author || '').trim() || nome.autor, idioma: '', descricao: (I.Subject || '').trim(), assuntos: [] }, capa, caps, toc: [], img,
+        liberar: () => { urls.forEach(async (u) => { try { const x = await u; if (x) URL.revokeObjectURL(x); } catch (e) { /* nada */ } }); try { pdf.destroy(); } catch (e) { /* nada */ } } });
+      l.toc = resolverToc([], l.caps);
+      l.escaneado = true;
+      return l;
+    }
     // cabeçalhos e rodapés repetidos
     const conta = new Map();
     for (const p of paginas) for (const l of [p.linhas[0], p.linhas[p.linhas.length - 1]]) if (l) { const k = norm(l.t).replace(/\d+/g, '#'); conta.set(k, (conta.get(k) || 0) + 1); }
@@ -489,16 +524,290 @@ const Formatos = (() => {
     return finalizar({ meta: { titulo: (I.Title || '').trim() || nome.titulo, autor: (I.Author || '').trim() || nome.autor, idioma: '', descricao: (I.Subject || '').trim(), assuntos: [] }, capa, caps: lista, toc: resolverToc([], lista) });
   }
 
+  /* ================= Kindle: MOBI / AZW / AZW3 / PRC (sem DRM) =================
+     Arquivo PalmDB: registro 0 = cabeçalhos (PalmDOC + MOBI + EXTH), depois os registros de texto
+     (sem compressão, PalmDOC LZ77 ou Huffman/CDIC) e depois as imagens. O texto é HTML do Kindle:
+     no MOBI antigo os capítulos são separados por <mbp:pagebreak>; no KF8 (AZW3) cada arquivo do livro
+     começa com seu próprio <html>. */
+  async function deMobi(arquivo, nomeArq) {
+    const buf = new Uint8Array(await arquivo.arrayBuffer());
+    const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+    const u16 = (o) => dv.getUint16(o), u32 = (o) => dv.getUint32(o);
+    const nRec = u16(76);
+    const ofs = [];
+    for (let i = 0; i < nRec; i++) ofs.push(u32(78 + i * 8));
+    ofs.push(buf.length);
+    const rec = (i) => buf.subarray(ofs[i], ofs[i + 1]);
+    const r0o = ofs[0];
+    const comp = u16(r0o), textoLen = u32(r0o + 4), nTexto = u16(r0o + 8), cripto = u16(r0o + 12);
+    if (cripto !== 0) {
+      throw Object.assign(new Error('drm'), { amigavel: 'Este livro do Kindle tem proteção (DRM) da Amazon: só abre no app Kindle. Livros sem proteção (MOBI/AZW3 comuns) abrem normalmente.' });
+    }
+    const temMobi = String.fromCharCode(...buf.subarray(r0o + 16, r0o + 20)) === 'MOBI';
+    const hLen = temMobi ? u32(r0o + 20) : 0;
+    const enc = temMobi ? u32(r0o + 28) : 1252;
+    const versao = temMobi ? u32(r0o + 36) : 0;
+    const campo = (rel) => (temMobi && rel + 4 <= 16 + hLen ? u32(r0o + rel) : 0xffffffff);
+    const primeiraImg = campo(0x6c);
+    const huffIni = campo(0x70), huffQtd = campo(0x74);
+    const exthFlags = campo(0x80);
+    const extraFlags = temMobi && hLen >= 0xe4 ? u16(r0o + 0xf2) : 0;
+    // EXTH: metadados (autor, título, capa...)
+    const exth = {};
+    if (temMobi && exthFlags !== 0xffffffff && exthFlags & 0x40) {
+      let p = r0o + 16 + hLen;
+      if (String.fromCharCode(...buf.subarray(p, p + 4)) === 'EXTH') {
+        const n = u32(p + 8); p += 12;
+        for (let i = 0; i < n && p + 8 <= buf.length; i++) {
+          const tipo = u32(p), tam = u32(p + 4);
+          if (tam < 8) break;
+          (exth[tipo] = exth[tipo] || []).push(buf.subarray(p + 8, p + tam));
+          p += tam;
+        }
+      }
+    }
+    const dec = new TextDecoder(enc === 65001 ? 'utf-8' : 'windows-1252');
+    const exStr = (t) => (exth[t] ? exth[t].map((b) => dec.decode(b).trim()).filter(Boolean) : []);
+    const exNum = (t) => (exth[t] && exth[t][0].length >= 4 ? new DataView(exth[t][0].buffer, exth[t][0].byteOffset).getUint32(0) : null);
+    let titulo = exStr(503)[0] || '';
+    if (!titulo && temMobi) { const fo = u32(r0o + 84), fl = u32(r0o + 88); if (fl && fl < 1000) titulo = dec.decode(buf.subarray(r0o + fo, r0o + fo + fl)); }
+    if (!titulo) titulo = new TextDecoder('latin1').decode(buf.subarray(0, 32)).replace(/\0.*$/, '').replace(/_/g, ' ');
+
+    // pedaços extras no fim de cada registro de texto (indicados por extraFlags)
+    const tamExtra = (d) => {
+      let n = 0, f = extraFlags >> 1;
+      while (f) {
+        if (f & 1) {
+          let pos = d.length - n, v = 0, bit = 0;
+          while (pos > 0) { const b = d[--pos]; v |= (b & 0x7f) << bit; bit += 7; if (b & 0x80 || bit >= 28) break; }
+          n += v;
+        }
+        f >>= 1;
+      }
+      if (extraFlags & 1 && d.length - n - 1 >= 0) n += (d[d.length - n - 1] & 3) + 1;
+      return n;
+    };
+    const palmdoc = (d) => {
+      const out = new Uint8Array(Math.max(4096, d.length * 8));
+      let o = 0, i = 0;
+      while (i < d.length) {
+        const c = d[i++];
+        if (c >= 1 && c <= 8) { for (let k = 0; k < c && i < d.length; k++) out[o++] = d[i++]; }
+        else if (c < 0x80) out[o++] = c;
+        else if (c >= 0xc0) { out[o++] = 0x20; out[o++] = c ^ 0x80; }
+        else {
+          const x = (c << 8) | d[i++];
+          const dist = (x >> 3) & 0x7ff, n = (x & 7) + 3;
+          for (let k = 0; k < n; k++) { out[o] = out[o - dist]; o++; }
+        }
+      }
+      return out.subarray(0, o);
+    };
+    let huff = null;
+    if (comp === 17480) {
+      const h = rec(huffIni);
+      const hv = new DataView(h.buffer, h.byteOffset, h.byteLength);
+      const o1 = hv.getUint32(8), o2 = hv.getUint32(12);
+      const dict1 = [];
+      for (let i = 0; i < 256; i++) {
+        const v = hv.getUint32(o1 + i * 4);
+        const len = v & 0x1f, term = !!(v & 0x80);
+        dict1.push([len, term, ((v >>> 8) + 1) * 2 ** (32 - len) - 1]);
+      }
+      const minc = [0], maxc = [0];
+      for (let i = 0; i < 32; i++) {
+        const len = i + 1;
+        minc.push(hv.getUint32(o2 + i * 8) * 2 ** (32 - len));
+        maxc.push((hv.getUint32(o2 + i * 8 + 4) + 1) * 2 ** (32 - len) - 1);
+      }
+      const dic = [];
+      for (let k = 1; k < huffQtd; k++) {
+        const c = rec(huffIni + k);
+        const cv = new DataView(c.buffer, c.byteOffset, c.byteLength);
+        const frases = cv.getUint32(8), bits = cv.getUint32(12);
+        const n = Math.min(2 ** bits, frases - dic.length);
+        for (let j = 0; j < n; j++) {
+          const off = cv.getUint16(16 + j * 2);
+          const bl = cv.getUint16(16 + off);
+          dic.push([c.subarray(18 + off, 18 + off + (bl & 0x7fff)), !!(bl & 0x8000)]);
+        }
+      }
+      const unpack = (d, prof) => {
+        if (prof > 32) return new Uint8Array(0);
+        const partes = [];
+        let total = 0;
+        let bitsRest = d.length * 8, bp = 0;
+        const byte = (i) => (i < d.length ? d[i] : 0);
+        for (;;) {
+          const bi = bp >> 3, sh = bp & 7;
+          const code = (((byte(bi) << 24) | (byte(bi + 1) << 16) | (byte(bi + 2) << 8) | byte(bi + 3)) << sh | (byte(bi + 4) >> (8 - sh))) >>> 0;
+          let [len, term, maxcode] = dict1[code >>> 24];
+          if (!term) { while (len < 32 && code < minc[len]) len++; maxcode = maxc[len]; }
+          bp += len; bitsRest -= len;
+          if (bitsRest < 0 || !len) break;
+          const r = Math.floor((maxcode - code) / 2 ** (32 - len));
+          const ent = dic[r];
+          if (!ent) break;
+          if (!ent[1]) { ent[0] = unpack(ent[0], prof + 1); ent[1] = true; }
+          partes.push(ent[0]); total += ent[0].length;
+        }
+        const out = new Uint8Array(total);
+        let o = 0;
+        for (const p of partes) { out.set(p, o); o += p.length; }
+        return out;
+      };
+      huff = (d) => unpack(d, 0);
+    } else if (comp !== 1 && comp !== 2) {
+      throw Object.assign(new Error('mobi_comp'), { amigavel: 'Este arquivo do Kindle usa um formato que não reconheço. Converta para EPUB (o Calibre faz isso de graça).' });
+    }
+    const pedacos = [];
+    let total = 0;
+    for (let i = 1; i <= nTexto && i < nRec; i++) {
+      let d = rec(i);
+      d = d.subarray(0, Math.max(0, d.length - tamExtra(d)));
+      const t = comp === 2 ? palmdoc(d) : comp === 17480 ? huff(d) : d;
+      pedacos.push(t); total += t.length;
+      if (i % 40 === 0) await sleep(0);
+    }
+    const bruto = new Uint8Array(total);
+    { let o = 0; for (const p of pedacos) { bruto.set(p, o); o += p.length; } }
+    let fim = textoLen || total;
+    const fdst = campo(0xc0);
+    if (versao >= 8 && fdst !== 0xffffffff && fdst < nRec) {
+      const f = rec(fdst);
+      if (String.fromCharCode(...f.subarray(0, 4)) === 'FDST' && f.length >= 20) {
+        const fv = new DataView(f.buffer, f.byteOffset, f.byteLength);
+        const e0 = fv.getUint32(16);
+        if (e0 > 0 && e0 <= total) fim = e0;
+      }
+    }
+    let html = dec.decode(bruto.subarray(0, fim));
+
+    // imagens: registros a partir de primeiraImg
+    const tipoImg = (b) => (b[0] === 0xff && b[1] === 0xd8 ? 'image/jpeg' : b[0] === 0x89 && b[1] === 0x50 ? 'image/png' : b[0] === 0x47 && b[1] === 0x49 ? 'image/gif' : b[0] === 0x42 && b[1] === 0x4d ? 'image/bmp' : '');
+    const blobImg = (n) => {
+      if (primeiraImg === 0xffffffff) return null;
+      const i = primeiraImg + n;
+      if (i < 0 || i >= nRec) return null;
+      const b = rec(i), t = tipoImg(b);
+      return t ? new Blob([b.slice()], { type: t }) : null;
+    };
+    const kf8 = versao >= 8;
+    if (kf8) {
+      // kindle:embed:XXXX → número em base 32 (1 = primeira imagem)
+      html = html.replace(/(src|href)\s*=\s*["']kindle:embed:([0-9A-V]{4})[^"']*["']/gi, (m, a, b) => `${a}="img/${parseInt(b, 32) - 1}"`);
+    } else {
+      html = html.replace(/<img([^>]*?)\brecindex\s*=\s*["']?0*(\d+)["']?([^>]*)>/gi, (m, a, n, b) => `<img${a} src="img/${parseInt(n, 10) - 1}"${b}>`);
+    }
+    // capítulos
+    let blocos;
+    if (kf8) blocos = html.split(/(?=<\?xml|<html[\s>])/i);
+    else blocos = html.split(/<mbp:pagebreak[^>]*>/i);
+    const caps = [];
+    let junta = '';
+    for (const b of blocos) {
+      const corpo = b.replace(/<\?xml[^>]*>/gi, '').replace(/<head[\s>][\s\S]*?<\/head>/gi, '').replace(/<\/?(html|body)[^>]*>/gi, '').replace(/<\/?mbp:[^>]*>/gi, '').replace(/\sfilepos\s*=\s*["']?\d+["']?/gi, '');
+      const doc = new DOMParser().parseFromString(`<body>${corpo}</body>`, 'text/html');
+      const { html: limpo } = limpar(doc.body, 'x.html', new Set());
+      const txt = textoDe(limpo);
+      if (!txt && !/<img/i.test(limpo)) continue;
+      // páginas muito curtas (folha de rosto, dedicatória em pedaços) se juntam com a próxima
+      junta += limpo;
+      if (txt.length < 200 && !/<img/i.test(limpo) && caps.length + 1 < blocos.length) continue;
+      caps.push({ titulo: tituloDoHtml(junta), html: junta, ids: [], path: 'mobi' });
+      junta = '';
+    }
+    if (junta) caps.push({ titulo: tituloDoHtml(junta), html: junta, ids: [], path: 'mobi' });
+    if (!caps.length) throw Object.assign(new Error('mobi_vazio'), { amigavel: 'Não encontrei texto neste arquivo do Kindle.' });
+    const lista = caps.flatMap(dividir);
+    const urls = new Map();
+    const img = async (p) => {
+      if (urls.has(p)) return urls.get(p);
+      const b = blobImg(parseInt(String(p).replace(/^.*\//, ''), 10));
+      const u = b ? URL.createObjectURL(b) : '';
+      urls.set(p, u);
+      return u;
+    };
+    const capaN = exNum(201);
+    let capa = capaN !== null && capaN !== 0xffffffff ? blobImg(capaN) : null;
+    if (!capa) { const m = /src="img\/(\d+)"/.exec(html); if (m && blocos.length && html.indexOf(m[0]) < 4000) capa = blobImg(+m[1]); }
+    const nome = Lia.doNomeDoArquivo(nomeArq || '');
+    const isbn = (exStr(104)[0] || '').replace(/[^\dX]/gi, '');
+    return finalizar({
+      meta: { titulo: titulo.trim() || nome.titulo, autor: exStr(100).join(', ') || nome.autor, idioma: (exStr(524)[0] || '').slice(0, 2).toLowerCase(), descricao: textoDe(exStr(103)[0] || ''), assuntos: exStr(105), data: exStr(106)[0] || '', editora: exStr(101)[0] || '', isbn },
+      capa, caps: lista, toc: resolverToc([], lista), img, liberar: () => urls.forEach((u) => u && URL.revokeObjectURL(u)),
+    });
+  }
+
+  /* ================= RTF ================= */
+  function deRtf(s, nomeArq) {
+    const cp = new TextDecoder('windows-1252');
+    let out = '', i = 0, pular = 0, prof = 0, uc = 1, pendPular = 0;
+    const pilha = [];
+    const DESTINOS = /^(fonttbl|colortbl|stylesheet|info|pict|object|header|footer|headerl|headerr|footerl|footerr|listtable|listoverridetable|rsidtbl|generator|xmlnstbl|themedata|colorschememapping|datastore|latentstyles|filetbl|revtbl|pgdsctbl)$/;
+    while (i < s.length) {
+      const c = s[i];
+      if (c === '{') { pilha.push([pular, uc]); prof++; i++; continue; }
+      if (c === '}') { const p = pilha.pop() || [0, 1]; pular = p[0]; uc = p[1]; prof--; i++; continue; }
+      if (c === '\\') {
+        const n = s[i + 1];
+        if (n === '\\' || n === '{' || n === '}') { if (!pular) out += n; i += 2; continue; }
+        if (n === "'") { if (pendPular > 0) pendPular--; else if (!pular) out += cp.decode(new Uint8Array([parseInt(s.substr(i + 2, 2), 16)])); i += 4; continue; }
+        if (n === '*') { pular = 1; i += 2; continue; }
+        if (n === '~') { if (!pular) out += ' '; i += 2; continue; }
+        if (n === '\n' || n === '\r') { if (!pular) out += '\n\n'; i += 2; continue; }
+        const m = /^\\([a-z]+)(-?\d+)? ?/i.exec(s.slice(i, i + 40));
+        if (!m) { i += 2; continue; }
+        const [tudo, pal, arg] = m;
+        i += tudo.length;
+        if (DESTINOS.test(pal)) { pular = 1; continue; }
+        if (pular) continue;
+        if (pal === 'par' || pal === 'sect' || pal === 'page') out += '\n\n';
+        else if (pal === 'line') out += '\n';
+        else if (pal === 'tab') out += '\t';
+        else if (pal === 'uc') uc = +arg || 0;
+        else if (pal === 'u') { let v = +arg; if (v < 0) v += 65536; out += String.fromCharCode(v); pendPular = uc; }
+        else if (pal === 'emdash') out += '—'; else if (pal === 'endash') out += '–';
+        else if (pal === 'lquote') out += '‘'; else if (pal === 'rquote') out += '’';
+        else if (pal === 'ldblquote') out += '“'; else if (pal === 'rdblquote') out += '”';
+        else if (pal === 'bullet') out += '•';
+        continue;
+      }
+      if (c === '\r' || c === '\n') { i++; continue; }
+      if (pendPular > 0) { pendPular--; i++; continue; }
+      if (!pular) out += c;
+      i++;
+    }
+    return deTexto(out, nomeArq);
+  }
+
+  /* ================= Imagem solta (página escaneada, quadrinho de uma página) ================= */
+  function deImagem(arquivo, nomeArq) {
+    const nome = Lia.doNomeDoArquivo(nomeArq || '');
+    let u = '';
+    const img = async () => { if (!u) u = URL.createObjectURL(arquivo); return u; };
+    const l = finalizar({ meta: { titulo: nome.titulo, autor: nome.autor, idioma: '', descricao: '', assuntos: [] }, capa: arquivo, caps: [{ titulo: nome.titulo || 'Imagem', html: '<img data-lc="imagem" alt="">', ids: [], path: 'img' }], toc: [], img, liberar: () => u && URL.revokeObjectURL(u) });
+    l.toc = resolverToc([], l.caps);
+    return l;
+  }
+
   /* ================= Entrada única ================= */
-  const EXT_ACEITAS = ['epub', 'pdf', 'txt', 'fb2', 'docx', 'html', 'htm', 'xhtml', 'md'];
+  const EXT_ACEITAS = ['epub', 'pdf', 'txt', 'fb2', 'docx', 'html', 'htm', 'xhtml', 'md', 'mobi', 'azw', 'azw3', 'prc', 'pdb', 'rtf', 'jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'];
   async function abrir(arquivo, nome, progresso) {
     const ext = (nome || arquivo.name || '').split('.').pop().toLowerCase();
-    const cab = new Uint8Array(await arquivo.slice(0, 64).arrayBuffer());
+    const cab = new Uint8Array(await arquivo.slice(0, 80).arrayBuffer());
     const ehZip = cab[0] === 0x50 && cab[1] === 0x4b;
     const asc = new TextDecoder('latin1').decode(cab);
-    if (/^(mobi|azw|azw3|kfx|prc)$/.test(ext) || asc.includes('BOOKMOBI')) {
-      const e = new Error('kindle'); e.amigavel = 'Arquivos do Kindle (MOBI/AZW) não abrem aqui. Converta para EPUB (o Calibre faz isso de graça) ou envie a versão EPUB. Livros comprados na Amazon com proteção (DRM) só abrem no app Kindle.'; throw e;
+    if (asc.slice(60, 68) === 'BOOKMOBI' || asc.slice(60, 68) === 'TEXtREAd') return deMobi(arquivo, nome);
+    if (ext === 'kfx' || asc.startsWith('CONT') || (ehZip && ext === 'kfx-zip')) {
+      throw Object.assign(new Error('kfx'), { amigavel: 'KFX é o formato fechado dos livros comprados na Amazon: só abre no app Kindle. Se o livro não tiver proteção, converta para EPUB no Calibre.' });
     }
+    if (/^(mobi|azw|azw3|prc)$/.test(ext)) throw Object.assign(new Error('kindle'), { amigavel: 'Este arquivo do Kindle está corrompido ou incompleto.' });
+    if (ext === 'doc' || (cab[0] === 0xd0 && cab[1] === 0xcf && cab[2] === 0x11 && cab[3] === 0xe0)) {
+      throw Object.assign(new Error('doc'), { amigavel: 'Arquivos .doc antigos do Word não abrem aqui. Abra no Word ou no Google Docs e salve como .docx (ou EPUB/PDF).' });
+    }
+    if (/^(jpe?g|png|gif|webp|bmp)$/.test(ext) || (cab[0] === 0xff && cab[1] === 0xd8) || (cab[0] === 0x89 && cab[1] === 0x50)) return deImagem(arquivo, nome);
+    if (ext === 'rtf' || asc.startsWith('{\\rtf')) return deRtf(new TextDecoder('latin1').decode(new Uint8Array(await arquivo.arrayBuffer())), nome);
     if (ehZip && (ext === 'epub' || ext === 'zip' || !EXT_ACEITAS.includes(ext))) {
       const zipTxt = new TextDecoder('latin1').decode(new Uint8Array(await arquivo.slice(0, 200).arrayBuffer()));
       if (zipTxt.includes('epub') || ext === 'epub') return epub(arquivo);

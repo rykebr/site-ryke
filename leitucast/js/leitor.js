@@ -70,8 +70,11 @@ const Leitor = (() => {
       <div class="lt-filtro lt-escuro" id="ltEscuro"></div>
       <div class="lt-filtro lt-quente" id="ltQuente"></div>`;
     const livro = $('#ltLivro', raiz);
-    pg = { E: criarPagina('pg-e'), D: criarPagina('pg-d'), S: criarPagina('pg-s'), F: criarPagina('pg-face'), V: criarPagina('pg-face pg-verso'), M: criarPagina('pg-m') };
-    livro.prepend(pg.S); livro.prepend(pg.D); livro.prepend(pg.E);
+    pg = { E: criarPagina('pg-e'), D: criarPagina('pg-d'), S: criarPagina('pg-s'), W: criarPagina('pg-w'), F: criarPagina('pg-face'), FW: criarPagina('pg-face'), V: criarPagina('pg-face pg-verso'), M: criarPagina('pg-m') };
+    livro.prepend(pg.W); livro.prepend(pg.S); livro.prepend(pg.D); livro.prepend(pg.E);
+    pg.W.classList.add('lt-oculto'); pg.FW.classList.add('lt-oculto');
+    pg.W.setAttribute('aria-hidden', 'true'); pg.FW.setAttribute('aria-hidden', 'true');
+    $('.lt-frente', raiz).appendChild(pg.FW);
     $('.lt-frente', raiz).appendChild(pg.F);
     $('.lt-verso', raiz).appendChild(pg.V);
     $('.lt-medida', raiz).appendChild(pg.M);
@@ -187,8 +190,16 @@ const Leitor = (() => {
     const ims = Array.from(p.fluxo.querySelectorAll('img'));
     await Promise.all(ims.map((im) => (im.complete ? null : new Promise((r) => { im.onload = im.onerror = r; setTimeout(r, 2500); }))));
   }
-  async function medir(c) {
+  let filaMedir = Promise.resolve();
+  function medir(c) {
+    if (cols[c]) return Promise.resolve(cols[c]);
+    const vez = filaMedir.then(() => medirAgora(c));
+    filaMedir = vez.catch(() => null);
+    return vez;
+  }
+  async function medirAgora(c) {
     if (cols[c]) return cols[c];
+    if (!L || !L.caps[c]) return 1;
     const m = pg.M;
     await mostrarCap(m, c);
     m.fluxo.style.transform = 'none';
@@ -279,11 +290,73 @@ const Leitor = (() => {
     if (!podePre() || animando) return;
     const alvo = await alvoFrente();
     if (!podePre() || animando || !alvo) return;
+    if (pg.S.cap !== alvo.c && pg.W.cap === alvo.c) trocarSW();
     if (!mesma(pg.S.ref, alvo) || pg.S.dataset.slot !== 'D') { await pintar(pg.S, alvo); pg.S.dataset.slot = 'D'; }
     if (animando) return;
     pg.S.setAttribute('aria-hidden', 'true');
     pg.S.classList.remove('lt-oculto'); // fica por baixo da página atual (z-index menor), já desenhada
+    if (pg.F.cap !== pos.c && pg.FW.cap === pos.c) trocarFrente();
     if (!mesma(pg.F.ref, pos)) await pintar(pg.F, pos);
+    agendarAquecer();
+  }
+  /* ---------- páginas vizinhas em cache (4 para frente e 4 para trás) ----------
+     Dentro do mesmo capítulo, mudar de página é só deslocar o texto já diagramado (instantâneo). O que custa é
+     entrar em outro capítulo: diagramar o capítulo inteiro de novo. Por isso, quando faltam 4 páginas ou menos
+     para o fim (ou para o começo) do capítulo, o capítulo vizinho já é montado em páginas reservadas, fora da
+     vista, e na hora de virar elas só trocam de lugar. Também ficam prontos o texto e as imagens dos capítulos
+     vizinhos e as medidas que dão o número das páginas. */
+  const RAIO = 4;
+  let tAq = 0;
+  function agendarAquecer() {
+    clearTimeout(tAq);
+    tAq = setTimeout(() => {
+      const vai = () => aquecer().catch(() => null);
+      if (window.requestIdleCallback) requestIdleCallback(vai, { timeout: 900 }); else vai();
+    }, 220);
+  }
+  async function aquecer() {
+    if (!podePre() || animando) return;
+    const c = pos.c, n = cols[c] || 1;
+    const perto = [];
+    if (n - 1 - pos.col <= RAIO && c + 1 < L.caps.length) perto.push(c + 1);
+    if (pos.col <= RAIO && c > 0) perto.push(c - 1);
+    for (const v of perto) {
+      await garantirTpl(v);
+      if (animando || pos.c !== c) return;
+      await medir(v);
+      if (animando || pos.c !== c) return;
+      decodificarImagens(tpl[v]);
+    }
+    if (!perto.length) return;
+    // páginas reservadas: para a frente (embaixo e na folha) ou, perto do começo, para trás (na folha)
+    const frente = perto[0] === c + 1;
+    if (frente && pg.W.cap !== c + 1 && pg.S.cap !== c + 1) { await pintar(pg.W, { c: c + 1, col: 0 }); pg.W.classList.add('lt-oculto'); }
+    if (animando || pos.c !== c) return;
+    const quer = frente ? c + 1 : c - 1;
+    if (pg.FW.cap !== quer && pg.F.cap !== quer) {
+      await sleep(30);
+      if (animando || pos.c !== c) return;
+      await pintar(pg.FW, { c: quer, col: quer === c - 1 ? ultimaPagina(quer) : 0 });
+      pg.FW.classList.add('lt-oculto');
+    }
+  }
+  function decodificarImagens(t) {
+    if (!t) return;
+    for (const im of t.querySelectorAll('img')) if (im.src && im.decode && !im._dec) { im._dec = 1; im.decode().catch(() => null); }
+  }
+  /* troca de papel: a página reservada (já com o capítulo diagramado) vira a de baixo, e vice-versa */
+  function trocarSW() {
+    const s = pg.S, w = pg.W;
+    w.classList.replace('pg-w', 'pg-s'); s.classList.replace('pg-s', 'pg-w');
+    s.classList.add('lt-oculto'); w.classList.add('lt-oculto');
+    w.dataset.slot = s.dataset.slot || 'D'; delete s.dataset.slot;
+    pg.S = w; pg.W = s;
+  }
+  function trocarFrente() {
+    const f = pg.F, fw = pg.FW;
+    fw.classList.remove('lt-oculto'); fw.removeAttribute('aria-hidden');
+    f.classList.add('lt-oculto'); f.setAttribute('aria-hidden', 'true');
+    pg.F = fw; pg.FW = f;
   }
   /* fim de uma virada para a frente: a página de baixo (já com o destino) passa a ser a de cima */
   function trocarDS() {
@@ -340,9 +413,16 @@ const Leitor = (() => {
       }
     } else {
       if (dir > 0) {
+        if (pg.S.cap !== alvo.c && pg.W.cap === alvo.c) trocarSW();
         if (!mesma(pg.S.ref, alvo)) await pintar(pg.S, alvo);
+        if (pg.F.cap !== pos.c && pg.FW.cap === pos.c) trocarFrente();
         if (!mesma(pg.F.ref, pos)) await pintar(pg.F, pos);
-      } else { await pintar(pg.S, pos); await pintar(pg.F, alvo); }
+      } else {
+        if (pg.S.cap !== pos.c && pg.W.cap === pos.c) trocarSW();
+        await pintar(pg.S, pos);
+        if (pg.F.cap !== alvo.c && pg.FW.cap === alvo.c) trocarFrente();
+        await pintar(pg.F, alvo);
+      }
       if (pg.V.ref || pg.V.cap !== -1 || !pg.V.classList.contains('vazia')) await pintar(pg.V, null);
       pg.V.classList.add('verso-papel');
       pg.S.dataset.slot = 'D';
@@ -765,7 +845,7 @@ const Leitor = (() => {
   function destacar(sel, cor = 'amarelo', nota = '') {
     marcas.push({ c: sel.c, i: sel.i, f: sel.f, cor, nota, txt: sel.txt.slice(0, 600), cap: L.caps[sel.c].titulo, ts: Date.now() });
     delete tpl[sel.c];
-    [pg.E, pg.D, pg.M].forEach((p) => { if (p.cap === sel.c) p.cap = -1; });
+    Object.values(pg).forEach((p) => { if (p.cap === sel.c) { p.cap = -1; p.ref = null; } });
     getSelection().removeAllRanges();
     ops.aoMarcas && ops.aoMarcas(marcas.slice());
     return pintarAtual();
@@ -775,7 +855,7 @@ const Leitor = (() => {
     if (!m) return;
     marcas.splice(i, 1);
     delete tpl[m.c];
-    [pg.E, pg.D, pg.M].forEach((p) => { if (p.cap === m.c) p.cap = -1; });
+    Object.values(pg).forEach((p) => { if (p.cap === m.c) { p.cap = -1; p.ref = null; } });
     ops.aoMarcas && ops.aoMarcas(marcas.slice());
     pintarAtual();
   }
@@ -941,7 +1021,7 @@ const Leitor = (() => {
     const c = pos.c;
     if (!calcularGeo() && forcar !== true) { await pintarAtual(); return; }
     cols.length = 0;
-    [pg.E, pg.D, pg.S, pg.F, pg.V, pg.M].forEach((p) => { p.cap = -1; });
+    [pg.E, pg.D, pg.S, pg.W, pg.F, pg.FW, pg.V, pg.M].forEach((p) => { p.cap = -1; p.ref = null; });
     await medir(c);
     pos = { c, col: inicioSpread(await colunaDoOffset(c, o)) };
     ancora = { c, col: pos.col, o }; // o mesmo ponto continua valendo no próximo ajuste

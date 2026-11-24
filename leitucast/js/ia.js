@@ -827,6 +827,7 @@ const Lia = (() => {
   const LIXO_AUTOR = /^(unknown|desconhecid[oa]|anonymous|an[oô]nimo|calibre|admin|user|usu[aá]rio|autor|author|.*@.*)$/i;
   function doNomeDoArquivo(nome) {
     let s = String(nome || '').replace(/\.[a-z0-9]{2,5}$/i, '');
+    if (!/\s/.test(s) && /\+/.test(s)) s = s.replace(/\+/g, ' '); // "Livro+O+Livro+dos+Segredos+-+Osho"
     s = s.replace(/[\[(][^\])]*(z-lib|libgen|epub|pdf|mobi|ebook|pt-br|ptbr|\d{4}|isbn|www\.)[^\])]*[\])]/gi, ' ');
     s = s.replace(/\b(97[89][\d-]{10,})\b/g, ' ').replace(/[_.]+/g, ' ').replace(/\b(epub|pdf|mobi|azw3|ebook|pt-br|ptbr|portugues)\b/gi, ' ').replace(/\s+/g, ' ').trim();
     let partes = s.split(/\s+[-–—]\s+|\s+by\s+|\s+por\s+/i).map((x) => x.trim()).filter(Boolean);
@@ -835,12 +836,26 @@ const Lia = (() => {
       const [x, y] = partes;
       const ax = acharAutorKB(x), ay = acharAutorKB(y);
       const pareceAutor = (t) => t.split(' ').length <= 4 && t.split(' ').every((w) => /^[A-ZÁÉÍÓÚÂÊÔÃÕÇ]/.test(w) || /^(de|da|do|dos|das|e)$/.test(w));
+      // três partes ou mais ("Autor - Título - Subtítulo" ou "Título - Subtítulo - Autor"): o autor é a ponta com cara de nome
+      if (partes.length >= 3) {
+        const ult = partes[partes.length - 1];
+        const nome = (t) => pareceAutor(t) && t !== t.toUpperCase();
+        if (acharAutorKB(ult) || (nome(ult) && !nome(x))) return { titulo: partes.slice(0, -1).join(' - '), autor: (acharAutorKB(ult) || {}).n || ult };
+        if (ax || nome(x)) return { titulo: partes.slice(1).join(' - '), autor: (ax || {}).n || x };
+      }
       if (ax && !ay) return { titulo: partes.slice(1).join(' - '), autor: ax.n };
       if (ay && !ax) return { titulo: x, autor: ay.n };
       if (CAT) {
         if (CAT.porAutor.has(norm(x)) && !CAT.porAutor.has(norm(y))) return { titulo: y, autor: x };
         if (CAT.porAutor.has(norm(y))) return { titulo: x, autor: y };
       }
+      // título em MAIÚSCULAS e nome normal ("Antonio Xavier - LETRAMENTO DIGITAL"); lista de autores com vírgulas
+      const caixaAlta = (t) => t === t.toUpperCase() && /[A-Z]/.test(t);
+      if (pareceAutor(x) && caixaAlta(y) && !caixaAlta(x)) return { titulo: y, autor: x };
+      if (pareceAutor(y) && caixaAlta(x) && !caixaAlta(y)) return { titulo: x, autor: y };
+      const variosAutores = (t) => { const ps = t.split(/\s*,\s*|\s+e\s+|\s*&\s*/).filter(Boolean); return ps.length > 1 && ps.every((q) => pareceAutor(q)); };
+      if (variosAutores(y) && !variosAutores(x)) return { titulo: x, autor: y };
+      if (variosAutores(x) && !variosAutores(y)) return { titulo: y, autor: x };
       if (pareceAutor(x) && !pareceAutor(y)) return { titulo: y, autor: x };
       return { titulo: x, autor: y };
     }
@@ -848,10 +863,19 @@ const Lia = (() => {
   }
   async function identificar({ titulo, autor, idioma, texto, arquivo, assuntos }) {
     await catalogo().catch(() => null);
-    let t = (titulo || '').trim(), a = (autor || '').trim();
+    // metadados de PDF às vezes vêm com escapes octais ("p\341gina") ou entre parênteses
+    const limpaMeta = (x) => String(x || '').replace(/\\([0-7]{3})/g, (m, o) => String.fromCharCode(parseInt(o, 8))).replace(/^\((.*)\)$/, '$1').trim();
+    let t = limpaMeta(titulo), a = limpaMeta(autor);
     const pelaPasta = doNomeDoArquivo(arquivo);
     if (!t || LIXO_TITULO.test(t) || t.length < 2) t = pelaPasta.titulo;
     if (!a || LIXO_AUTOR.test(a)) a = pelaPasta.autor;
+    /* nome de arquivo no padrão "Título - Autor" (bibliotecas organizadas) e metadados que não têm nada a ver com
+       ele (resto do programa que gerou o PDF, legenda de foto...): vale o nome do arquivo */
+    if (pelaPasta.titulo && pelaPasta.autor && t !== pelaPasta.titulo) {
+      const pals = (x) => new Set(norm(x).split(/\W+/).filter((w) => w.length > 3));
+      const pa = pals(pelaPasta.titulo + ' ' + pelaPasta.autor), pt = pals(t + ' ' + a);
+      if (![...pt].some((w) => pa.has(w))) { t = pelaPasta.titulo; a = pelaPasta.autor; }
+    }
     const r = { titulo: t || 'Sem título', autor: a || '', idioma: idioma ? idioma.slice(0, 2).toLowerCase() : '', generos: [], ano: null, capa: '', sinopse: '', ol: '', confianca: 0.4, passos: [] };
     if (!r.idioma && texto) r.idioma = detectarIdioma(texto);
     const kb = a ? acharAutorKB(a) : null;

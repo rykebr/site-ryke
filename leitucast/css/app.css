@@ -458,6 +458,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 .pg-fluxo > div:first-child > h1:first-child, .pg-fluxo > div:first-child > h2:first-child, .pg-fluxo > h2:first-child, .pg-fluxo > h1:first-child { margin-top: .4em; }
 .pg-fluxo img { display: block; max-width: 100%; max-height: calc(var(--pg-ch) - 2em); margin: .8em auto; object-fit: contain; break-inside: avoid; border-radius: 2px; }
 .pg-fluxo blockquote { margin: .8em 1.2em; font-style: italic; }
+.pg-fluxo img.pg-inteira { max-height: var(--pg-ch); height: var(--pg-ch); width: 100%; margin: 0 auto; object-fit: contain; break-after: column; }
 .pg-fluxo hr { border: 0; text-align: center; margin: 1.2em 0; height: 1em; }
 .pg-fluxo hr::after { content: '❦'; color: var(--tinta2); font-size: .9em; }
 .pg-fluxo a { color: inherit; text-decoration-color: var(--tinta2); text-underline-offset: 2px; }
@@ -663,6 +664,7 @@ body.lendo > #app { visibility: hidden; }
 /* a página de cima (D/E) sempre por cima da que espera pronta por baixo (S) */
 .lt-livro > .pg-d, .lt-livro > .pg-e { z-index: 2; }
 .lt-livro > .pg-s { z-index: 1; }
+.lt-livro > .pg-w { z-index: 0; }
 /* entrada: só criar conta ou fazer login */
 .entrada-botoes { display: grid; gap: 12px; margin: 14px 0 6px; }
 .entrada-botoes .btn { min-height: 54px; font-size: 16.5px; }
