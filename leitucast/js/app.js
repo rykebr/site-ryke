@@ -999,8 +999,12 @@
       if (box) box.innerHTML = `<div class="motivo-ia">${ico('check')}<span>Baixado. Está na sua estante e funciona sem internet.</span></div>`;
       return true;
     } catch (e) {
-      if (box) box.innerHTML = '<p class="erro-msg">Não consegui baixar agora. Confira a internet e tente de novo.</p>';
-      else toast('Não consegui baixar agora. Confira a internet.');
+      // biblioteca fora do ar (manutenção do Gutenberg responde 503): diz isso, em vez de culpar a internet da pessoa
+      const fora = navigator.onLine !== false && /HTTP 5\d\d|nao_e_epub|bloqueado/.test(String(e && e.message));
+      const biblio = String(l.src || '').startsWith('ws:') ? 'O Wikisource' : 'O Project Gutenberg';
+      const msg = fora ? `${biblio}, a biblioteca de onde este livro vem, está fora do ar agora (manutenção). Tente de novo mais tarde; os livros que você já baixou continuam funcionando.` : 'Não consegui baixar agora. Confira a internet e tente de novo.';
+      if (box) box.innerHTML = `<p class="erro-msg">${esc(msg)}</p>`;
+      else toast(msg, 6000);
       return false;
     }
   }

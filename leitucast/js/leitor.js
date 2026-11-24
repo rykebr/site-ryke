@@ -9,6 +9,13 @@ const Leitor = (() => {
   let cfg = null;
   let geo = null;
   let pos = { c: 0, col: 0 };
+  /* âncora: o ponto exato da leitura (capítulo + caractere). Ajustes de tela (fonte que chega depois, barra do
+     navegador, girar o celular) refazem as páginas a partir dela, e não do começo da página na tela, que fica
+     um pouco antes; antes disso cada ajuste recuava uma página e, ao fechar, o recuo era salvo.
+     Vale enquanto a pessoa não muda de página (c e col iguais). */
+  let ancora = null;
+  const ancoraValida = () => !!(ancora && ancora.c === pos.c && ancora.col === pos.col);
+  function offsetAtual() { return ancoraValida() ? ancora.o : offsetDoInicio(paginaVisivel(pos.col)); }
   const cols = [];
   const tpl = [];
   const tamCap = [];
@@ -106,7 +113,7 @@ const Leitor = (() => {
     const cw = W - mx * 2;
     const linha = cfg.tam * cfg.entre;
     const ch = Math.max(linha * 4, Math.floor((H - mt - mb) / linha) * linha);
-    geo = { W, H, mx, mt, mb, cw, ch: Math.floor(ch), duas, celular };
+    geo = { W, H, mx, mt, mb, cw, ch: Math.floor(ch), duas, celular, palco: w + 'x' + h };
     const livro = $('#ltLivro', raiz);
     livro.style.width = (duas ? W * 2 : W) + 'px';
     livro.style.height = H + 'px';
@@ -204,7 +211,10 @@ const Leitor = (() => {
       if (meu !== medindo || !L) return;
       if (!cols[c]) { await medir(c); await sleep(16); }
     }
-    if (meu === medindo) atualizarRodape();
+    if (meu !== medindo) return;
+    // com todos os capítulos medidos, o número exato substitui a estimativa também nas páginas da tela
+    for (const p of [pg.E, pg.D, pg.S, pg.F]) if (p && p.ref) p.querySelector('.pg-num').textContent = nomePagina(p.ref.c, p.ref.col);
+    atualizarRodape();
   }
 
   /* ================= páginas ================= */
@@ -648,7 +658,7 @@ const Leitor = (() => {
     clearTimeout(salvarT);
     salvarT = setTimeout(() => {
       if (!L) return;
-      const o = offsetDoInicio(paginaVisivel(pos.col));
+      const o = offsetAtual();
       ops.aoSalvar && ops.aoSalvar({ c: pos.c, o, pct: pctAtual(), pag: nomePagina(pos.c, pos.col), tot: totalPaginas(), ppm: Math.round(ppm) });
     }, 350);
     atualizarRodape();
@@ -828,8 +838,7 @@ const Leitor = (() => {
     return r;
   }
   function posicaoAtual() {
-    const p = paginaVisivel(pos.col);
-    return { c: pos.c, o: offsetDoInicio(p) };
+    return { c: pos.c, o: offsetAtual() };
   }
   async function mostrarDestaque(c, ini, fim, frase) {
     if (!L) return;
@@ -910,15 +919,32 @@ const Leitor = (() => {
 
   /* ================= abrir e fechar ================= */
   let ajusteT = 0;
+  /* a área do leitor muda de tamanho sem a janela mudar (o rodapé de progresso e a barra de cima aparecem
+     depois que o livro abre): antes as páginas ficavam com a altura do primeiro instante, 16 px a mais,
+     e o mesmo trecho caía em outra página a cada abertura. Agora qualquer mudança real refaz as páginas. */
+  let obsPalco = null, tamPalco = '';
+  function observarPalco() {
+    const palco = $('#ltPalco', raiz);
+    if (!palco || !window.ResizeObserver) return;
+    obsPalco = new ResizeObserver(() => {
+      const t = palco.clientWidth + 'x' + palco.clientHeight;
+      // compara com o tamanho usado no último cálculo das páginas (e não com o do início da observação)
+      if (t === tamPalco || (geo && t === geo.palco)) { tamPalco = t; return; }
+      tamPalco = t;
+      aoRedimensionar();
+    });
+    obsPalco.observe(palco);
+  }
   async function reajustar(forcar) {
     if (!L) return;
-    const o = offsetDoInicio(paginaVisivel(pos.col));
+    const o = offsetAtual();
     const c = pos.c;
     if (!calcularGeo() && forcar !== true) { await pintarAtual(); return; }
     cols.length = 0;
     [pg.E, pg.D, pg.S, pg.F, pg.V, pg.M].forEach((p) => { p.cap = -1; });
     await medir(c);
     pos = { c, col: inicioSpread(await colunaDoOffset(c, o)) };
+    ancora = { c, col: pos.col, o }; // o mesmo ponto continua valendo no próximo ajuste
     await pintarAtual();
     medirTudo();
   }
@@ -947,9 +973,11 @@ const Leitor = (() => {
     if (!L) return;
     await medir(c0);
     pos = { c: c0, col: p0.o ? inicioSpread(await colunaDoOffset(c0, p0.o)) : 0 };
+    ancora = { c: c0, col: pos.col, o: p0.o || 0 };
     await pintarAtual();
     paginaDesde = Date.now();
     addEventListener('resize', aoRedimensionar);
+    observarPalco();
     // iPhone: a barra do Safari aparece e some mudando a altura útil; e fontes que chegam depois mudam as linhas
     if (window.visualViewport) visualViewport.addEventListener('resize', aoRedimensionar);
     try { document.fonts.addEventListener('loadingdone', aoFontes); } catch (e) { /* sem a API */ }
@@ -960,10 +988,11 @@ const Leitor = (() => {
     if (!L) return;
     registrarTempo();
     clearTimeout(salvarT);
-    try { const o = offsetDoInicio(paginaVisivel(pos.col)); ops.aoSalvar && ops.aoSalvar({ c: pos.c, o, pct: pctAtual(), pag: nomePagina(pos.c, pos.col), tot: totalPaginas(), ppm: Math.round(ppm) }); } catch (e) { /* tela já saiu */ }
+    try { const o = offsetAtual(); ops.aoSalvar && ops.aoSalvar({ c: pos.c, o, pct: pctAtual(), pag: nomePagina(pos.c, pos.col), tot: totalPaginas(), ppm: Math.round(ppm) }); } catch (e) { /* tela já saiu */ }
     medindo++;
     removeEventListener('resize', aoRedimensionar);
     if (window.visualViewport) visualViewport.removeEventListener('resize', aoRedimensionar);
+    if (obsPalco) { obsPalco.disconnect(); obsPalco = null; }
     try { document.fonts.removeEventListener('loadingdone', aoFontes); } catch (e) { /* sem a API */ }
     removeEventListener('keydown', teclas);
     try { L.liberar && L.liberar(); } catch (e) { /* nada */ }

@@ -674,3 +674,6 @@ body.lendo > #app { visibility: hidden; }
 .logo-hero { width: min(78vw, 360px); height: auto; aspect-ratio: 1; border-radius: 28px; box-shadow: 0 18px 50px rgba(0,0,0,.55), 0 0 0 1px rgba(232,176,75,.25); }
 .entrada-hero.com-logo p.lema { margin-left: auto; margin-right: auto; }
 .carregando.abertura img { width: min(52vw, 200px); height: auto; border-radius: 24px; box-shadow: 0 14px 40px rgba(0,0,0,.5); animation: pulsa 2.2s ease-in-out infinite; }
+/* altura fixa da linha de informações do rodapé: vazia (no primeiro instante) ela tinha 0 px, a área do leitor
+   ficava 16 px mais alta, e as páginas calculadas nesse instante mudavam de tamanho (o livro reabria fora do lugar) */
+.lt-rodape .info { height: 16px; line-height: 16px; flex: none; }
